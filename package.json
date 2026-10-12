@@ -1,0 +1,54 @@
+{
+  "name": "grapesjs-pages",
+  "version": "1.0.0",
+  "description": "GrapesJS plugin: a Pages sidebar backed by IndexedDB — create, rename, duplicate, delete and switch pages, per-page undo/redo, copy/paste of components between pages and manual REST sync with a server. The groundwork for turning GrapesJS into a CMS.",
+  "type": "module",
+  "main": "./dist/grapesjs-pages.umd.cjs",
+  "module": "./dist/grapesjs-pages.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/grapesjs-pages.js",
+      "require": "./dist/grapesjs-pages.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "openapi.yaml",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "grapesjs": ">=0.21.0 <1.0.0"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.0.0",
+    "grapesjs": "0.21.13",
+    "jsdom": "^25.0.1",
+    "typescript": "5.6.3",
+    "vite": "5.4.11",
+    "vitest": "^2.1.9"
+  },
+  "keywords": [
+    "grapesjs",
+    "grapesjs-plugin",
+    "pages",
+    "page-manager",
+    "cms",
+    "indexeddb",
+    "undo",
+    "sync"
+  ],
+  "author": "Alexander Shibisty",
+  "license": "MIT"
+}

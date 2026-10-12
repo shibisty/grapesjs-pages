@@ -1,0 +1,22 @@
+import pagesPlugin from './plugin';
+
+export default pagesPlugin;
+export { pagesPlugin };
+export { getPagesManager, PANEL_BUTTON_ID } from './plugin';
+export { EVENTS, COMMANDS } from './events';
+export { DEFAULT_OPTIONS, DEFAULT_KEYS, resolveOptions } from './options';
+export { locales, SUPPORTED_LOCALES, I18N_NS } from './i18n';
+export type { PagesLabels } from './i18n';
+export { IndexedDbPageStore } from './store/IndexedDbPageStore';
+export { MemoryPageStore } from './store/MemoryPageStore';
+export type { PageStore } from './store/types';
+export { PagesManager } from './core/PagesManager';
+export { SnapshotHistory } from './core/SnapshotHistory';
+export { ComponentClipboard, serializeComponent, remapIds } from './clipboard/ComponentClipboard';
+export { RestClient, HttpError } from './sync/RestClient';
+export type { RemotePage, RemotePageMeta } from './sync/RestClient';
+export { buildPlan } from './sync/plan';
+export type { SyncPlanItem, SyncKind, ConflictChoice } from './sync/plan';
+export { SyncService } from './sync/SyncService';
+export type { SyncResult } from './sync/SyncService';
+export type * from './types';
