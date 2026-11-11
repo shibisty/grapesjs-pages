@@ -1,6 +1,6 @@
 {
   "name": "grapesjs-pages",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "GrapesJS plugin: a Pages sidebar — pages in IndexedDB with per-page undo/redo, copy/paste between pages and manual REST sync, or (remote mode) a server-first CMS editor with layouts, templates, a page tree, publishing and revisions.",
   "type": "module",
   "main": "./dist/grapesjs-pages.umd.cjs",

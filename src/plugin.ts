@@ -248,10 +248,17 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       // Our view replaces the other views of the switcher panel.
       panelButtons?.forEach((b: any) => b.id !== PANEL_BUTTON_ID && b.get('active') && b.set('active', false));
       sidebar.show();
+      // `listen` follows the command in GrapesJS 0.21, not in 0.23: keep the
+      // button in step ourselves (the command is already active, so the
+      // button's own run is a no-op).
+      const ours = panelButtons?.get(PANEL_BUTTON_ID);
+      if (ours && !ours.get('active')) ours.set('active', true);
     },
     stop() {
       wantOpen = false;
       sidebar?.hide();
+      const ours = panelButtons?.get(PANEL_BUTTON_ID);
+      if (ours?.get('active')) ours.set('active', false);
     },
   });
   editor.Commands.add(COMMANDS.toggle, {
