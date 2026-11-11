@@ -250,3 +250,20 @@ describe('undo / redo', () => {
     expect(html(s.editor)).not.toContain('cmd');
   });
 });
+
+describe('detach', () => {
+  it('saves, then stops saving editor changes until the next open', async () => {
+    const s = await createEditor();
+    const id = s.api.getActiveId()!;
+    s.editor.getWrapper()!.append('<p>kept</p>');
+    await s.api.detach();
+    expect(s.api.getActiveId()).toBeNull();
+    expect(JSON.stringify((await s.store.get(id))!.data)).toContain('kept');
+    s.editor.setComponents('<p>someone else content</p>');
+    await settle(s.api);
+    expect(JSON.stringify((await s.store.get(id))!.data)).not.toContain('someone');
+    await s.api.open(id);
+    expect(s.editor.getHtml()).toContain('kept');
+    await destroyEditor(s.editor);
+  });
+});

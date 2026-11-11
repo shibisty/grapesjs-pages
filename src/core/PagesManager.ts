@@ -319,6 +319,21 @@ export class PagesManager {
   }
 
   /**
+   * Lets go of the canvas: pending changes of the active record are saved,
+   * then nothing is open and editor changes are not saved anywhere until
+   * the next `open()`. For another plugin that loads its own content into
+   * the editor (grapesjs-storage's entries).
+   */
+  async detach(): Promise<void> {
+    await this.flush();
+    if (!this.active) return;
+    this.active = null;
+    this.emitHistory();
+    this.emitChange();
+    this.emit(EVENTS.detach);
+  }
+
+  /**
    * Writes a record that came from outside (e.g. the server) and, if it is
    * the active page, reloads it. Pending local edits of that page are
    * discarded — the caller decided the external version wins.

@@ -4,6 +4,8 @@ export const EVENTS = {
   ready: 'pages-manager:ready',
   /** A page was opened. Payload: the `PageRecord`. */
   open: 'pages-manager:open',
+  /** The canvas was let go (`detach()`): no record is open. */
+  detach: 'pages-manager:detach',
   /** The page list or a page's metadata changed (create/rename/save/sync…). */
   change: 'pages-manager:change',
   /** Undo/redo availability of the active page may have changed. */

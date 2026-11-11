@@ -198,6 +198,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     canUndo: () => manager.canUndo(),
     canRedo: () => manager.canRedo(),
     flush: () => manager.flush(),
+    detach: () => manager.detach(),
     copy,
     paste,
     sync: async () => {

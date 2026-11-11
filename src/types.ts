@@ -219,6 +219,12 @@ export interface PagesManagerApi {
   canRedo(): boolean;
   /** Writes pending changes of the active page to the store. */
   flush(): Promise<void>;
+  /**
+   * Saves, then lets go of the canvas: nothing is open and editor changes
+   * are not saved until the next `open()` (for a plugin that shows its own
+   * content, e.g. grapesjs-storage's entries).
+   */
+  detach(): Promise<void>;
   copy(): boolean;
   paste(): boolean;
   /** Opens the sync dialog. */
