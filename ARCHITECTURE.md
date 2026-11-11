@@ -1,5 +1,14 @@
 # grapesjs-pages — архитектура и путь к CMS
 
+> **Status (2.0, 2026-11-11).** Remote mode (`remote` option, contract
+> `openapi.v2.yaml`) implements proposals 2–4 below and part of 1: the server
+> is the source of truth (`src/remote/RemotePageStore.ts`, IndexedDB as cache
+> and offline queue), records have kinds (site, layout, template, page), pages
+> form a tree with slugs and SEO values, Publish sends `getHtml()`/`getCss()`,
+> revisions can be restored. Composing site CSS + layout + page happens on the
+> server when it renders; in the editor each record is still its own project.
+> The v1 local mode and its manual sync are unchanged.
+
 ## Как устроено сейчас
 
 ```

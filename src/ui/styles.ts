@@ -44,6 +44,14 @@ export const CSS = `
 .gjsp.gjsp-floating{position:absolute;top:0;right:0;bottom:0;width:280px;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.35);background:var(--gjs-primary-color,#444)}
 .gjsp-toggle{position:absolute;top:8px;right:8px;z-index:60;background:var(--gjs-primary-color,#444);color:var(--gjs-font-color,#ddd);border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:6px 10px;cursor:pointer;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .gjsp-toggle:hover{background:rgba(255,255,255,.12)}
+.gjsp-section{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.65;cursor:default}
+.gjsp-section .gjsp-act{font-size:15px;opacity:1}
+.gjsp-item.has-conflict .gjsp-sub{color:#ffb74d;opacity:.9}
+.gjsp-import{padding:10px}
+.gjsp-check{display:flex;align-items:center;gap:6px;margin:4px 0 10px}
+.gjsp-choices{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.gjsp-choices button{text-align:start}
+.gjsp-select{width:100%;box-sizing:border-box;padding:6px 8px;margin:4px 0 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:3px}
 .gjsp-toggle.gjsp-btn-inline{position:static;box-shadow:none;padding:5px;border:0;border-radius:0;background:transparent}
 `;
 

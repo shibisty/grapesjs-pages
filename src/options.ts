@@ -22,7 +22,11 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   panelId: null,
   sidebarContainer: null,
   injectCss: true,
+  remote: null,
+  slotTag: 'page-slot',
 };
+
+const TAG_RE = /^[a-z][a-z0-9]*-[a-z0-9-]*$/;
 
 const num = (v: unknown, def: number, min: number): number =>
   typeof v === 'number' && Number.isFinite(v) && v >= min ? v : def;
@@ -52,5 +56,8 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
     sidebarContainer: o.sidebarContainer ?? null,
     keys,
     labels: { ...(o.labels || {}) },
+    remote: o.remote && typeof o.remote.url === 'string' && o.remote.url.trim() ? { ...o.remote } : null,
+    // A custom element name: lower case with a dash.
+    slotTag: typeof o.slotTag === 'string' && TAG_RE.test(o.slotTag) ? o.slotTag : DEFAULT_OPTIONS.slotTag,
   };
 }

@@ -12,6 +12,17 @@ export interface RemoteInfo {
 }
 
 /**
+ * What a record is (contract v2). v1 records have no kind: they are pages.
+ * - `page`     a page of the site (or, with `templateId`, an entry of a template)
+ * - `layout`   the frame pages are put into (header, footer, a slot)
+ * - `template` a design whose entries fill its fields (grapesjs-storage)
+ * - `site`     the one site record: global styles and settings
+ */
+export type RecordKind = 'page' | 'layout' | 'template' | 'site';
+
+export type PageStatus = 'draft' | 'published' | 'archived';
+
+/**
  * One page as it is kept in the local store.
  *
  * The record layout is the storage format of the original
@@ -31,6 +42,52 @@ export interface PageRecord {
   deleted: boolean;
   /** `null` — the page has never been on the server. */
   remote: RemoteInfo | null;
+
+  /* ---- contract v2 (remote mode); all optional, v1 records lack them ---- */
+
+  /** Default `page`. */
+  kind?: RecordKind;
+  /** A page's address, `/` or `/a/b-c`; the server assigns one from the name when empty. */
+  slug?: string;
+  parentId?: string | null;
+  /** Order among siblings. */
+  position?: number;
+  layoutId?: string | null;
+  /** Set: the page is an entry of that template (edited by grapesjs-storage). */
+  templateId?: string | null;
+  status?: PageStatus;
+  publishedAt?: string | null;
+  /**
+   * A page's values (`seo.title`, `seo.description`, `in_menu`, the
+   * site's own keys). Only the keys changed since the last push are sent
+   * (`dirtyValues`); `null` deletes a key on the server.
+   */
+  values?: Record<string, unknown>;
+  dirtyValues?: string[];
+  /** The server changed the record while it had local edits. */
+  conflict?: boolean;
+  /** Header fields changed locally (name, slug, parent…) — pushed without the project. */
+  dirtyMeta?: boolean;
+}
+
+/** Remote mode: the plugin works against a contract v2 server (openapi.v2.yaml). */
+export interface RemoteOptions {
+  /** Base URL of the v2 API, e.g. `https://example.com/api/editor` (no trailing slash). */
+  url: string;
+  /** Extra headers for every request (an API key, a CSRF token). */
+  headers?: (() => Record<string, string>) | null;
+  /** `fetch` credentials, e.g. `include` for a cookie session on another origin. */
+  credentials?: RequestCredentials;
+  /** How often the record lists are refreshed from the server, ms (0: only on focus and after saves). */
+  refreshInterval?: number;
+  /** Retry delay after a failed save, ms (doubles up to 60 s). */
+  retryDelay?: number;
+  /** IndexedDB database of the local cache. Default `<dbName>-remote`. */
+  cacheDbName?: string;
+  /** Your own cache store instead of IndexedDB (e.g. `MemoryPageStore` in tests). */
+  cache?: PageStore | null;
+  /** `fetch` implementation (tests). */
+  fetch?: typeof fetch;
 }
 
 export interface ServerSettings {
@@ -92,9 +149,19 @@ export interface PagesOptions {
   sidebarContainer?: string | null;
   /** Inject the plugin CSS into `document.head`. */
   injectCss?: boolean;
+  /**
+   * Remote mode (contract v2): the server is the source of truth, IndexedDB
+   * a cache and an offline queue; layouts, templates, the page tree,
+   * publishing and revisions. Without it the plugin is the v1 local editor
+   * with manual sync.
+   */
+  remote?: RemoteOptions | null;
+  /** The element a layout marks the page's place with. */
+  slotTag?: string;
 }
 
-export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'labels'>> {
+export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'labels' | 'remote'>> {
+  remote: RemoteOptions | null;
   keys: KeyBindings;
   labels: Partial<PagesLabels>;
 }
@@ -108,11 +175,41 @@ export interface RemoveOptions {
   confirm?: boolean;
 }
 
+/** What a new record starts with. */
+export interface CreateInit {
+  name?: string;
+  data?: ProjectData;
+  kind?: RecordKind;
+  slug?: string;
+  parentId?: string | null;
+  layoutId?: string | null;
+  position?: number;
+}
+
+/** Header fields of a record, as the properties dialog edits them. */
+export interface RecordPatch {
+  name?: string;
+  slug?: string;
+  parentId?: string | null;
+  layoutId?: string | null;
+  position?: number;
+  /** Values to set; `null` deletes a key. */
+  values?: Record<string, unknown>;
+}
+
+/** One published revision (remote mode). */
+export interface Revision {
+  revision: number;
+  createdAt: string;
+  createdBy: string;
+  live: boolean;
+}
+
 /** Public API, available as `editor.PagesManager` and via `getPagesManager(editor)`. */
 export interface PagesManagerApi {
   list(): Promise<PageRecord[]>;
   open(id: string, opts?: OpenOptions): Promise<void>;
-  create(init?: { name?: string; data?: ProjectData }): Promise<PageRecord>;
+  create(init?: CreateInit): Promise<PageRecord>;
   duplicate(id: string): Promise<PageRecord | undefined>;
   rename(id: string, name?: string): Promise<void>;
   remove(id: string, opts?: RemoveOptions): Promise<void>;
@@ -135,4 +232,24 @@ export interface PagesManagerApi {
   store: PageStore;
   /** Programmatic sync without the dialog: `plan()` then `apply(plan)`. */
   syncService: SyncService;
+
+  /* ---- remote mode (contract v2); they reject in local mode ---- */
+
+  /** Is the plugin in remote mode? */
+  isRemote(): boolean;
+  /** Changes header fields (name, slug, parent, layout, position, values). */
+  update(id: string, patch: RecordPatch): Promise<PageRecord | undefined>;
+  /** Makes the record live: saves, then sends its HTML and CSS (an entry: its values). */
+  publish(id?: string): Promise<PageRecord>;
+  /** Takes a page off the site. */
+  unpublish(id: string): Promise<PageRecord>;
+  revisions(id: string): Promise<Revision[]>;
+  /** The revision's project becomes the draft (not published) and is reopened. */
+  restore(id: string, revision: number): Promise<void>;
+  /** Reads the server's lists now. */
+  refresh(): Promise<void>;
+  /** Resolves a conflict: keep mine, take the server's, or keep both. */
+  resolve(id: string, choice: 'local' | 'remote' | 'both'): Promise<void>;
+  /** Uploads the pages of the v1 local database as new pages; resolves to how many. */
+  importLocal(): Promise<number>;
 }

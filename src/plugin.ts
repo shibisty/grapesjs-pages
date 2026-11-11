@@ -4,17 +4,30 @@ import { isEditorAlive, PagesManager } from './core/PagesManager';
 import { COMMANDS, EVENTS } from './events';
 import { createTranslator, registerMessages } from './i18n';
 import { resolveOptions } from './options';
+import { RemoteClient } from './remote/RemoteClient';
+import { RemoteEditor } from './remote/RemoteEditor';
+import { RemotePageStore } from './remote/RemotePageStore';
+import { registerSlot, toggleSlotBlock } from './remote/slot';
 import { IndexedDbPageStore } from './store/IndexedDbPageStore';
+import type { PageStore } from './store/types';
 import { SyncService } from './sync/SyncService';
-import type { PagesManagerApi, PagesOptions } from './types';
+import type { PageRecord, PagesManagerApi, PagesOptions, RecordKind } from './types';
 import { fmt, report } from './utils';
 import { h, PAGE_ICON_HTML, pageIcon } from './ui/dom';
 import { findHostPanel, findSidebarHost } from './ui/host';
 import { openSettingsModal, openSyncModal } from './ui/modals';
+import { openConflictModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
 import { Sidebar } from './ui/Sidebar';
 import { injectCss } from './ui/styles';
 
 export const PANEL_BUTTON_ID = 'pages-manager';
+
+/** A short stable hash of a string (the cache database name per server). */
+const hash = (s: string): string => {
+  let x = 5381;
+  for (let i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0;
+  return (x >>> 0).toString(36);
+};
 
 type EditorWithPages = Editor & { PagesManager?: PagesManagerApi; __gjspCleanup?: () => void };
 
@@ -35,8 +48,53 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
   const opts = resolveOptions(userOpts);
   registerMessages(editor);
   const t = createTranslator(editor, opts.labels);
-  const store = opts.store || new IndexedDbPageStore(opts.dbName);
+  // Remote mode: the server first, an IndexedDB cache (one per server URL).
+  let rstore: RemotePageStore | null = null;
+  let store: PageStore;
+  if (opts.remote) {
+    const ro = opts.remote;
+    const client = new RemoteClient({
+      url: ro.url,
+      headers: ro.headers ?? opts.headers,
+      credentials: ro.credentials,
+      fetch: ro.fetch,
+      conflictMessage: () => t('conflictErr'),
+    });
+    const cache = ro.cache || new IndexedDbPageStore(ro.cacheDbName || `${opts.dbName}-remote-${hash(client.base)}`);
+    rstore = new RemotePageStore(
+      cache,
+      client,
+      {
+        onChange: () => {
+          if (!isEditorAlive(editor)) return;
+          editor.trigger(EVENTS.change);
+          editor.trigger(EVENTS.remote, rstore!.state);
+        },
+        onRemote: (rec) => {
+          if (rec.id === manager.activeId) void manager.replaceRecord(rec).catch(report);
+        },
+        onRemoved: (id) => void forget(id).catch(report),
+        onConflict: (rec) => isEditorAlive(editor) && editor.trigger(EVENTS.conflict, rec),
+      },
+      { retryDelay: ro.retryDelay }
+    );
+    store = rstore;
+  } else {
+    store = opts.store || new IndexedDbPageStore(opts.dbName);
+  }
   const manager = new PagesManager(editor, store, opts, t);
+  const remote = rstore ? new RemoteEditor(editor, manager, rstore, t, () => new IndexedDbPageStore(opts.dbName)) : null;
+  const needRemote = (): RemoteEditor => {
+    if (!remote) throw new Error('grapesjs-pages: remote mode only (the `remote` option)');
+    return remote;
+  };
+  /** A record the server dropped: if it was open, open another one. */
+  const forget = async (id: string): Promise<void> => {
+    if (id !== manager.activeId) return;
+    const rest = (await manager.list()).filter((r) => (r.kind || 'page') === 'page' && !r.templateId);
+    if (rest.length) await manager.open(rest[0].id, { force: true, skipFlush: true });
+    else await manager.create();
+  };
   const clipboard = new ComponentClipboard(editor, store, () => manager.activeId);
   const sync = new SyncService(editor, manager, store, opts, t);
   let sidebar: Sidebar | null = null;
@@ -83,6 +141,41 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     return true;
   };
 
+  const refresh = async (): Promise<void> => {
+    const r = needRemote();
+    await r.store.refresh();
+    sidebar?.setLocalCount((await r.localPages()).length);
+  };
+
+  /** Publishes, then flashes the result (or the error) in the sidebar. */
+  const publish = async (id?: string): Promise<PageRecord> => {
+    const r = needRemote();
+    try {
+      const rec = await r.publish(id);
+      sidebar?.flash(fmt(t('publishedMsg'), rec.kind === 'site' ? t('site') : rec.name));
+      return rec;
+    } catch (e) {
+      sidebar?.flash(fmt(t('saveError'), (e as Error).message));
+      throw e;
+    }
+  };
+
+  /** A new page, layout or template, named "<Kind> <n>". */
+  const createKind = async (kind: RecordKind): Promise<PageRecord> => {
+    const base = kind === 'layout' ? t('layout') : kind === 'template' ? t('newTemplate') : t('defaultName');
+    const taken = new Set((await manager.list()).map((r) => r.name));
+    let n = (await manager.list()).filter((r) => (r.kind || 'page') === kind).length + 1;
+    while (taken.has(`${base} ${n}`)) n++;
+    return manager.create({ kind, name: `${base} ${n}` });
+  };
+
+  const importLocal = async (): Promise<number> => {
+    const n = await needRemote().importLocal();
+    sidebar?.setLocalCount(0);
+    sidebar?.flash(fmt(t('imported'), n));
+    return n;
+  };
+
   const api: PagesManagerApi = {
     list: () => manager.list(),
     open: (id, o) => manager.open(id, o),
@@ -98,7 +191,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     copy,
     paste,
     sync: async () => {
-      await openSyncModal(editor, sync, t);
+      if (remote) await refresh();
+      else await openSyncModal(editor, sync, t);
     },
     getActiveId: () => manager.activeId,
     getSettings: () => ({ ...sync.settings }),
@@ -106,6 +200,15 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     whenReady: () => manager.whenReady(),
     store,
     syncService: sync,
+    isRemote: () => !!remote,
+    update: (id, patch) => needRemote().update(id, patch),
+    publish: (id) => publish(id),
+    unpublish: (id) => needRemote().unpublish(id),
+    revisions: (id) => needRemote().revisions(id),
+    restore: (id, rev) => needRemote().restore(id, rev),
+    refresh: () => refresh(),
+    resolve: (id, choice) => needRemote().resolve(id, choice),
+    importLocal: () => importLocal(),
   };
   ed.PagesManager = api;
 
@@ -149,6 +252,24 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
   editor.Commands.add(COMMANDS.paste, { run: () => paste() });
   editor.Commands.add(COMMANDS.sync, { run: () => void openSyncModal(editor, sync, t) });
   editor.Commands.add(COMMANDS.settings, { run: () => void openSettingsModal(editor, sync, t) });
+  editor.Commands.add(COMMANDS.publish, { run: () => void publish().catch(report) });
+  editor.Commands.add(COMMANDS.refresh, { run: () => void refresh().catch(report) });
+  editor.Commands.add(COMMANDS.revisions, {
+    run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
+      const id = o.id || manager.activeId;
+      if (remote && id) void openRevisionsModal(editor, remote, t, id).catch(report);
+    },
+  });
+  editor.Commands.add(COMMANDS.properties, {
+    run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
+      const id = o.id || manager.activeId;
+      if (remote && id) void openPropertiesModal(editor, remote, t, id).catch(report);
+    },
+  });
+
+  // Layouts mark where the page goes; the block is offered while one is open.
+  registerSlot(editor, opts.slotTag, () => t('slotLabel'));
+  on(EVENTS.open, (rec: PageRecord) => toggleSlotBlock(editor, opts.slotTag, rec?.kind === 'layout', t('slotBlock')));
 
   // The panel undo/redo buttons and the keymaps use the per-page history.
   editor.Commands.add('core:undo', { run: () => void manager.undo() });
@@ -185,6 +306,10 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     if (disposed) return;
     disposed = true;
     manager.destroy();
+    rstore?.close();
+    if (refreshTimer) clearInterval(refreshTimer);
+    window.removeEventListener('online', onOnline);
+    window.removeEventListener('focus', onOnline);
     sidebar?.destroy();
     toggleBtn?.remove();
     offs.splice(0).forEach((off) => off());
@@ -192,6 +317,18 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     if (ed.__gjspCleanup === cleanup) delete ed.__gjspCleanup;
   };
   ed.__gjspCleanup = cleanup;
+
+  let refreshTimer: ReturnType<typeof setInterval> | null = null;
+  let lastRefresh = 0;
+  /** Back online or back to the tab: send what waits, read what changed. */
+  function onOnline(): void {
+    if (!rstore || !isEditorAlive(editor)) return;
+    rstore.wake();
+    if (Date.now() - lastRefresh > 5000) {
+      lastRefresh = Date.now();
+      void rstore.refresh().catch(report);
+    }
+  }
 
   function onUnload(): void {
     if (!isEditorAlive(editor)) return cleanup();
@@ -219,10 +356,16 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       remove: (id) => void remove(id).catch(report),
       undo: () => void manager.undo(),
       redo: () => void manager.redo(),
-      sync: () => void openSyncModal(editor, sync, t).catch(report),
+      sync: () => void (remote ? refresh() : openSyncModal(editor, sync, t)).catch(report),
       settings: () => void openSettingsModal(editor, sync, t),
       close: () => editor.stopCommand(COMMANDS.open),
-    });
+      createKind: (kind) => void createKind(kind).catch(report),
+      properties: (id) => remote && void openPropertiesModal(editor, remote, t, id).catch(report),
+      publish: () => void publish().catch(report),
+      revisions: (id) => remote && void openRevisionsModal(editor, remote, t, id).catch(report),
+      resolve: (id) => remote && void openConflictModal(editor, remote, t, id).catch(report),
+      importLocal: () => void importLocal().catch(report),
+    }, remote);
 
     const container = editor.getContainer() as HTMLElement;
     const { el, mode } = findSidebarHost(editor, opts.sidebarContainer);
@@ -276,8 +419,18 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     mountUi();
     await sync.restore();
     await clipboard.restore();
+    if (rstore) {
+      // The server's lists first; offline, the cache is used as it is.
+      await rstore.refresh().catch(report);
+      lastRefresh = Date.now();
+      window.addEventListener('online', onOnline);
+      window.addEventListener('focus', onOnline);
+      const every = opts.remote?.refreshInterval ?? 30_000;
+      if (every > 0) refreshTimer = setInterval(onOnline, every);
+    }
     await manager.start();
     await sidebar?.render();
+    if (remote) sidebar?.setLocalCount((await remote.localPages()).length);
   };
 
   editor.onReady(() => {

@@ -58,4 +58,47 @@ export interface PagesLabels {
   done: string;
   errors: string;
   conflictErr: string;
+
+  /* ---- remote mode (contract v2) ---- */
+  layouts: string;
+  templates: string;
+  site: string;
+  newLayout: string;
+  newTemplate: string;
+  properties: string;
+  publish: string;
+  unpublish: string;
+  published: string;
+  draft: string;
+  revisions: string;
+  restore: string;
+  live: string;
+  noRevisions: string;
+  /** %s — revision number */
+  confirmRestore: string;
+  slug: string;
+  parent: string;
+  none: string;
+  layout: string;
+  seoTitle: string;
+  seoDescription: string;
+  inMenu: string;
+  saving: string;
+  saved: string;
+  offline: string;
+  /** %s — error */
+  saveError: string;
+  conflictHint: string;
+  resolve: string;
+  /** %s — name */
+  publishedMsg: string;
+  /** %s — list */
+  publishWarnings: string;
+  /** %s — count */
+  importLocal: string;
+  /** %s — count */
+  imported: string;
+  slotLabel: string;
+  slotBlock: string;
+  refresh: string;
 }

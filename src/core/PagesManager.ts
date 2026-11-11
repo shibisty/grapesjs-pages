@@ -2,7 +2,7 @@ import type { Editor } from 'grapesjs';
 import { EVENTS } from '../events';
 import type { Translator } from '../i18n';
 import { META, type PageStore } from '../store/types';
-import type { OpenOptions, PageRecord, ProjectData, ResolvedOptions } from '../types';
+import type { CreateInit, OpenOptions, PageRecord, ProjectData, ResolvedOptions } from '../types';
 import { clone, report, sleep, uid } from '../utils';
 import { SnapshotHistory } from './SnapshotHistory';
 
@@ -230,9 +230,15 @@ export class PagesManager {
     return `${base} ${n}`;
   }
 
-  newRecord(name: string, data: ProjectData): PageRecord {
+  newRecord(name: string, data: ProjectData, extra: Omit<CreateInit, 'name' | 'data'> = {}): PageRecord {
     const now = Date.now();
-    return { id: uid(), name, data, createdAt: now, updatedAt: now, dirty: true, deleted: false, remote: null };
+    const rec: PageRecord = { id: uid(), name, data, createdAt: now, updatedAt: now, dirty: true, deleted: false, remote: null };
+    // Contract v2 fields only when given, so v1 records keep their shape.
+    (Object.keys(extra) as (keyof typeof extra)[]).forEach((k) => {
+      if (extra[k] !== undefined) (rec as any)[k] = extra[k];
+    });
+    if (extra.kind || extra.slug || extra.parentId !== undefined || extra.layoutId !== undefined) rec.dirtyMeta = true;
+    return rec;
   }
 
   async open(id: string, { force = false, skipFlush = false }: OpenOptions = {}): Promise<void> {
@@ -242,7 +248,7 @@ export class PagesManager {
     if (!rec || rec.deleted || !this.alive()) return;
     this.active = id;
     await this.store.setMeta(META.active, id);
-    const { str } = await this.load(rec.data);
+    const { str } = await this.load(rec.data || this.blank());
     const hs = this.hist.get(id);
     if (hs) hs.replaceCurrent(str);
     else this.hist.set(id, new SnapshotHistory(str, this.opts.historyLimit));
@@ -251,9 +257,9 @@ export class PagesManager {
     this.emit(EVENTS.open, rec);
   }
 
-  async create({ name, data }: { name?: string; data?: ProjectData } = {}): Promise<PageRecord> {
+  async create({ name, data, ...extra }: CreateInit = {}): Promise<PageRecord> {
     await this.flush();
-    const rec = this.newRecord(name || (await this.nextName()), data ? clone(data) : this.blank());
+    const rec = this.newRecord(name || (await this.nextName()), data ? clone(data) : this.blank(), extra);
     await this.store.put(rec);
     await this.open(rec.id, { force: true });
     return rec;
@@ -263,7 +269,12 @@ export class PagesManager {
     await this.flush();
     const src = await this.store.get(id);
     if (!src || src.deleted) return undefined;
-    return this.create({ name: `${src.name} (${this.t('copySuffix')})`, data: src.data });
+    return this.create({
+      name: `${src.name} (${this.t('copySuffix')})`,
+      data: src.data || this.blank(),
+      ...(src.kind ? { kind: src.kind } : {}),
+      ...(src.kind === 'page' || (!src.kind && src.layoutId) ? { parentId: src.parentId ?? null, layoutId: src.layoutId ?? null } : {}),
+    });
   }
 
   async rename(id: string, name: string): Promise<boolean> {
@@ -333,16 +344,21 @@ export class PagesManager {
   async start(): Promise<void> {
     const pages = await this.list();
     if (!this.alive()) return;
-    if (!pages.length) {
+    // Layouts, templates, the site and entries are not pages: a remote site
+    // without pages gets its home page from the editor content too.
+    if (!pages.some((p) => (p.kind || 'page') === 'page' && !p.templateId)) {
       const data = this.editor.getProjectData() as ProjectData;
-      const rec = this.newRecord(`${this.t('defaultName')} 1`, data);
+      const rec = this.newRecord(`${this.t('defaultName')} 1`, data, this.opts.remote ? { kind: 'page', slug: '/' } : {});
       await this.store.put(rec);
       this.active = rec.id;
       await this.store.setMeta(META.active, rec.id);
       this.hist.set(rec.id, new SnapshotHistory(JSON.stringify(data), this.opts.historyLimit));
     } else {
       const last = await this.store.getMeta<string>(META.active);
-      const target = pages.find((p) => p.id === last) || pages[0];
+      // Back to the last open record; else the first page (not a layout,
+      // a template, the site or an entry).
+      const target =
+        pages.find((p) => p.id === last) || pages.find((p) => (p.kind || 'page') === 'page' && !p.templateId) || pages[0];
       await this.open(target.id, { force: true });
     }
     this.ready = true;

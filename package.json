@@ -1,7 +1,7 @@
 {
   "name": "grapesjs-pages",
-  "version": "1.0.0",
-  "description": "GrapesJS plugin: a Pages sidebar backed by IndexedDB — create, rename, duplicate, delete and switch pages, per-page undo/redo, copy/paste of components between pages and manual REST sync with a server. The groundwork for turning GrapesJS into a CMS.",
+  "version": "2.0.0",
+  "description": "GrapesJS plugin: a Pages sidebar — pages in IndexedDB with per-page undo/redo, copy/paste between pages and manual REST sync, or (remote mode) a server-first CMS editor with layouts, templates, a page tree, publishing and revisions.",
   "type": "module",
   "main": "./dist/grapesjs-pages.umd.cjs",
   "module": "./dist/grapesjs-pages.js",
@@ -16,6 +16,7 @@
   "files": [
     "dist",
     "openapi.yaml",
+    "openapi.v2.yaml",
     "README.md",
     "LICENSE"
   ],
@@ -47,7 +48,10 @@
     "cms",
     "indexeddb",
     "undo",
-    "sync"
+    "sync",
+    "layouts",
+    "publishing",
+    "offline"
   ],
   "author": "Alexander Shibisty",
   "license": "MIT"

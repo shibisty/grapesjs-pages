@@ -16,6 +16,12 @@ export const EVENTS = {
   settings: 'pages-manager:settings',
   /** A sync run finished. Payload: `{ ok, errors }`. */
   sync: 'pages-manager:synced',
+  /** Remote mode: a record went live. Payload: `{ record, revision, warnings }`. */
+  publish: 'pages-manager:published',
+  /** Remote mode: a save hit a newer server version. Payload: the `PageRecord`. */
+  conflict: 'pages-manager:conflict',
+  /** Remote mode: the connection state changed. Payload: `'idle' | 'saving' | 'offline' | 'error'`. */
+  remote: 'pages-manager:remote',
 } as const;
 
 /** Command ids registered by the plugin. */
@@ -26,4 +32,8 @@ export const COMMANDS = {
   paste: 'pages-manager:paste',
   sync: 'pages-manager:sync',
   settings: 'pages-manager:settings',
+  publish: 'pages-manager:publish',
+  revisions: 'pages-manager:revisions',
+  properties: 'pages-manager:properties',
+  refresh: 'pages-manager:refresh',
 } as const;

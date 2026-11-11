@@ -1,0 +1,767 @@
+# grapesjs-pages contract v2 (remote mode). v1 (manual sync) is openapi.yaml.
+openapi: 3.1.0
+info:
+  title: grapesjs-pages contract v2
+  version: 2.0.0
+  license:
+    name: MIT
+    identifier: MIT
+  description: 'What grapesjs-pages (remote mode, the `remote` option) expects from a server. The paths are relative
+    to the base URL the plugin is given (`remote.url`); authentication is the host''s business (the plugin sends
+    the `headers` option and, with `credentials`, cookies).
+
+
+    Rules:
+
+
+    - **Records** are a site (one), layouts, templates and pages, keyed by UUIDs the editor generates.
+
+    - **Versions**: every record has a `version` that changes on every write (also the `ETag`). `If-Match: "7"`
+    makes a write, delete, publish or restore conditional: `412` when the record moved on. A write without `If-Match`
+    is unconditional (the editor''s "keep mine"); a first write creates the record (`201`).
+
+    - **Writes**: omitted header fields stay as they are; `""` clears an id (`parent_id`, `layout_id`); `values`
+    sets keys and `null` deletes one; keys not sent stay. A template''s `fields` stay when omitted (grapesjs-storage
+    owns them).
+
+    - **Publishing** sends `editor.getHtml()` (the body''s content, without `<body>`) and `editor.getCss()`; the
+    server sanitizes them. An entry (a page with `template_id`) publishes with an empty body. A layout marks the
+    page''s place with `<page-slot></page-slot>` (or an element with `data-page-slot`).
+
+    - Errors are `{"error": "…"}`; invalid input `422` with `{"errors": {"field": ["…"]}}`.
+
+
+    luna-pages implements this contract under `/v1/editor` (and `/internal/v1/apps/{app}/editor`).'
+servers:
+- url: https://example.com/api/editor
+  description: Any base URL
+# Authentication is up to the host (a session cookie, a key added by its backend): none here.
+security:
+- {}
+tags:
+- name: records
+  description: The site, layouts, templates and pages (drafts).
+- name: publish
+  description: Making drafts live, revisions, restoring.
+paths:
+  /site:
+    parameters: []
+    get:
+      tags:
+      - records
+      summary: The site
+      description: The application's site with its draft project (global CSS, symbols); created empty on first use.
+      operationId: getSite
+      responses:
+        '200':
+          description: The site.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+      - records
+      summary: Change the site
+      operationId: putSite
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteWrite'
+      responses:
+        '200':
+          description: The changed site.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /{kind}:
+    parameters:
+    - $ref: '#/components/parameters/Kind'
+    get:
+      tags:
+      - records
+      summary: List records
+      description: Every layout, template or page of the application without projects, oldest first (pages by position).
+        The `items` shape is what grapesjs-pages' sync reads.
+      operationId: listRecords
+      responses:
+        '200':
+          description: The records.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Record'
+                required:
+                - items
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /{kind}/{id}:
+    parameters:
+    - $ref: '#/components/parameters/Kind'
+    - $ref: '#/components/parameters/ID'
+    get:
+      tags:
+      - records
+      summary: Get a record
+      description: The record with its draft project in `data` and, for a page, its draft values.
+      operationId: getRecord
+      responses:
+        '200':
+          description: The record.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWithData'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+      - records
+      summary: Create or replace a record
+      operationId: putRecord
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWrite'
+      responses:
+        '200':
+          description: Replaced; the new version.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Record'
+        '201':
+          description: Created.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Record'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+      - records
+      summary: Delete a record
+      description: Deletes it with its content. A deleted layout leaves its pages without one; a page's children
+        lose their parent.
+      operationId: deleteRecord
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Deleted.
+        '409':
+          description: A template that pages still use.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /{kind}/{id}/publish:
+    parameters:
+    - $ref: '#/components/parameters/Kind'
+    - $ref: '#/components/parameters/ID'
+    post:
+      tags:
+      - publish
+      summary: Publish a record
+      operationId: publishRecord
+      description: 'The published HTML and CSS. The HTML is sanitized here (no scripts, no event handlers, no `javascript:`
+        URLs, iframes from the allowed hosts only; the site settings `custom_code` and `iframe_hosts` widen that),
+        the CSS too. A layout needs a `<page-slot>`. An entry sends no body: its draft values are checked against
+        its template''s fields and published; its template must be published. `data` (the project) is saved as the
+        draft first. The version moves on.'
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishWrite'
+      responses:
+        '200':
+          description: Live; the new revision and any warnings (template fields without an element).
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Published'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /site/publish:
+    parameters: []
+    post:
+      tags:
+      - publish
+      summary: Publish the site's CSS
+      operationId: publishSite
+      description: The site's global CSS (sanitized), first in every page's CSS.
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishWrite'
+      responses:
+        '200':
+          description: Live.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishedSite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /pages/{id}/unpublish:
+    parameters:
+    - $ref: '#/components/parameters/ID'
+    post:
+      tags:
+      - publish
+      summary: Unpublish a page
+      operationId: unpublishPage
+      description: Takes the page off the site; its revisions stay. The version moves on.
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The page, now a draft.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Record'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /{kind}/{id}/revisions:
+    parameters:
+    - $ref: '#/components/parameters/Kind'
+    - $ref: '#/components/parameters/ID'
+    get:
+      tags:
+      - publish
+      summary: List revisions
+      operationId: listRevisions
+      description: The published revisions of a record, newest (the live one) first; the newest 20 are kept.
+      responses:
+        '200':
+          description: The revisions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revisions'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /site/revisions:
+    parameters: []
+    get:
+      tags:
+      - publish
+      summary: List the site's revisions
+      operationId: listSiteRevisions
+      responses:
+        '200':
+          description: The revisions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revisions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /{kind}/{id}/revisions/{revision}/restore:
+    parameters:
+    - $ref: '#/components/parameters/Kind'
+    - $ref: '#/components/parameters/ID'
+    - $ref: '#/components/parameters/Revision'
+    post:
+      tags:
+      - publish
+      summary: Restore a revision
+      operationId: restoreRevision
+      description: Copies the revision's project into the draft, for the editor to reopen; it is not published.
+        The version moves on.
+      parameters:
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The record with the restored draft in `data`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWithData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/Precondition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  schemas:
+    Site:
+      type: object
+      properties:
+        name:
+          type: string
+        settings:
+          type: object
+          additionalProperties: true
+          description: Languages, domain, fonts…
+        version:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/Project'
+      required:
+      - name
+      - settings
+      - version
+      - updated_at
+    Project:
+      type: object
+      description: A GrapesJS project (`editor.getProjectData()`), at most 2 MiB, stored as it is.
+      additionalProperties: true
+    SiteWrite:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        settings:
+          type: object
+          additionalProperties: true
+        data:
+          $ref: '#/components/schemas/Project'
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+      - error
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - error
+      - errors
+    Record:
+      type: object
+      description: A layout, template or page. Pages carry the page fields, templates `fields`.
+      properties:
+        kind:
+          type: string
+          enum:
+          - layout
+          - template
+          - page
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The name; a page's title.
+        version:
+          type: integer
+          description: Changes on every write.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        slug:
+          type: string
+          example: /products/coffee-grinder
+        page_kind:
+          type: string
+          enum:
+          - free
+          - entry
+        status:
+          type: string
+          enum:
+          - draft
+          - published
+          - archived
+        layout_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+      required:
+      - kind
+      - id
+      - name
+      - version
+      - created_at
+      - updated_at
+    Field:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]{0,63}$
+          example: price
+        type:
+          type: string
+          enum:
+          - text
+          - richtext
+          - image
+          - link
+          - number
+          - boolean
+          - date
+          - select
+          - list
+        label:
+          type: string
+          maxLength: 200
+        required:
+          type: boolean
+        default:
+          description: Any JSON value.
+        options:
+          type: array
+          items:
+            type: string
+          description: The choices of a `select`.
+        format:
+          type: string
+          description: A number or date format, e.g. `0.00`.
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+          description: The fields of a `list` item (one level).
+      required:
+      - name
+      - type
+    RecordWithData:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/Project'
+          values:
+            type: object
+            description: A page's draft values by key (`field.<name>`, `seo.<name>`, the client's own keys).
+            additionalProperties: true
+    RecordWrite:
+      type: object
+      description: 'What `grapesjs-pages` v1 sends (`name`, `data`; other properties such as `id` and
+
+        `updatedAt` are ignored) plus the optional v2 properties. Omitted page references
+
+        keep their value; a new page without `slug` gets one from its name.
+
+        '
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        data:
+          $ref: '#/components/schemas/Project'
+        slug:
+          type: string
+          description: '`/` for the home page, else `/a/b-c` of lower-case letters, digits and dashes.'
+        layout_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        template_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Makes the page an entry of the template.
+        parent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        position:
+          type: integer
+        values:
+          type: object
+          maxProperties: 200
+          description: Keys to set (`field.price`, `seo.description`…); `null` deletes a key; keys not sent stay.
+            64 KiB a value.
+          additionalProperties: true
+        fields:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Field'
+          description: A template's fields.
+      required:
+      - name
+    PublishWrite:
+      type: object
+      description: '`editor.getHtml()` and `editor.getCss()`; an entry sends nothing.'
+      properties:
+        html:
+          type: string
+          maxLength: 2097152
+        css:
+          type: string
+          maxLength: 1048576
+        data:
+          $ref: '#/components/schemas/Project'
+    Published:
+      type: object
+      properties:
+        record:
+          $ref: '#/components/schemas/Record'
+        revision:
+          type: integer
+          description: The new revision (0 for an entry, whose design is its template's).
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+      - record
+      - revision
+      - warnings
+    PublishedSite:
+      type: object
+      properties:
+        record:
+          $ref: '#/components/schemas/Site'
+        revision:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+      - record
+      - revision
+      - warnings
+    Revisions:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              revision:
+                type: integer
+              created_at:
+                type: string
+                format: date-time
+              created_by:
+                type: string
+                description: '`key:<key id>` or `dashboard`.'
+              live:
+                type: boolean
+      required:
+      - items
+  responses:
+    BadRequest:
+      description: Not JSON, or a malformed `If-Match`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Precondition:
+      description: '`If-Match` does not match the current version, or the record is gone. Reload, merge, or write
+        without `If-Match`.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooLarge:
+      description: The body is larger than 4 MiB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Invalid:
+      description: The request body is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    NotFound:
+      description: No such record in this application.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Not signed in, or not allowed (what the host requires).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: The version the edits are based on, quoted like an ETag (`"7"`). Omitted = unconditional (the
+        editor's "keep mine").
+      schema:
+        type: string
+        example: '"7"'
+    Kind:
+      name: kind
+      in: path
+      required: true
+      description: The kind of record.
+      schema:
+        type: string
+        enum:
+        - layouts
+        - templates
+        - pages
+    ID:
+      name: id
+      in: path
+      required: true
+      description: The record's id, a UUID the editor generates (stable across devices; `PUT` creates).
+      schema:
+        type: string
+        format: uuid
+    Revision:
+      name: revision
+      in: path
+      required: true
+      description: A revision number from the revisions list.
+      schema:
+        type: integer
+        minimum: 1
+  headers:
+    ETag:
+      description: The record's version, quoted.
+      schema:
+        type: string
+        example: '"8"'
