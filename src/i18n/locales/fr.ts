@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'La page s’affiche ici',
   slotBlock: 'Emplacement de page',
   refresh: 'Actualiser depuis le serveur',
+  search: 'Rechercher',
+  noMatches: 'Aucun résultat',
+  expand: 'Déplier',
+  collapse: 'Replier',
 };
 
 export default messages;

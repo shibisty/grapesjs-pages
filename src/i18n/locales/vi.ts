@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Trang sẽ nằm ở đây',
   slotBlock: 'Vị trí trang',
   refresh: 'Làm mới từ máy chủ',
+  search: 'Tìm kiếm',
+  noMatches: 'Không tìm thấy gì',
+  expand: 'Mở rộng',
+  collapse: 'Thu gọn',
 };
 
 export default messages;

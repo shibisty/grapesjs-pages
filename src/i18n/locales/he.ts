@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'כאן ייכנס הדף',
   slotBlock: 'מקום לדף',
   refresh: 'רענון מהשרת',
+  search: 'חיפוש',
+  noMatches: 'לא נמצא דבר',
+  expand: 'הרחבה',
+  collapse: 'כיווץ',
 };
 
 export default messages;

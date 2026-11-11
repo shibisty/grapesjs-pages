@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Sayfa buraya gelir',
   slotBlock: 'Sayfa yuvası',
   refresh: 'Sunucudan yenile',
+  search: 'Ara',
+  noMatches: 'Hiçbir şey bulunamadı',
+  expand: 'Genişlet',
+  collapse: 'Daralt',
 };
 
 export default messages;

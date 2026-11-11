@@ -101,4 +101,8 @@ export interface PagesLabels {
   slotLabel: string;
   slotBlock: string;
   refresh: string;
+  search: string;
+  noMatches: string;
+  expand: string;
+  collapse: string;
 }

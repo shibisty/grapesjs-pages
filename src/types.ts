@@ -252,4 +252,10 @@ export interface PagesManagerApi {
   resolve(id: string, choice: 'local' | 'remote' | 'both'): Promise<void>;
   /** Uploads the pages of the v1 local database as new pages; resolves to how many. */
   importLocal(): Promise<number>;
+  /**
+   * Moves a page before, after or inside another one (what drag and drop
+   * and Alt+arrows do); siblings are renumbered. Resolves to how many
+   * pages changed (0: not possible, e.g. into its own subtree).
+   */
+  move(id: string, targetId: string, where: 'before' | 'inside' | 'after'): Promise<number>;
 }

@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Ovdje ide stranica',
   slotBlock: 'Mjesto za stranicu',
   refresh: 'Osvježi sa servera',
+  search: 'Pretraga',
+  noMatches: 'Ništa nije pronađeno',
+  expand: 'Proširi',
+  collapse: 'Skupi',
 };
 
 export default messages;

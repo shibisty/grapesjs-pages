@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: '页面放在这里',
   slotBlock: '页面插槽',
   refresh: '从服务器刷新',
+  search: '搜索',
+  noMatches: '未找到任何内容',
+  expand: '展开',
+  collapse: '折叠',
 };
 
 export default messages;

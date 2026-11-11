@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Hier komt de pagina',
   slotBlock: 'Paginaplek',
   refresh: 'Vernieuwen vanaf de server',
+  search: 'Zoeken',
+  noMatches: 'Niets gevonden',
+  expand: 'Uitvouwen',
+  collapse: 'Samenvouwen',
 };
 
 export default messages;

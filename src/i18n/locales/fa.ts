@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'صفحه اینجا قرار می‌گیرد',
   slotBlock: 'جای صفحه',
   refresh: 'بازخوانی از سرور',
+  search: 'جستجو',
+  noMatches: 'چیزی پیدا نشد',
+  expand: 'باز کردن',
+  collapse: 'بستن',
 };
 
 export default messages;

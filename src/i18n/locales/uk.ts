@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Тут буде сторінка',
   slotBlock: 'Місце для сторінки',
   refresh: 'Оновити з сервера',
+  search: 'Пошук',
+  noMatches: 'Нічого не знайдено',
+  expand: 'Розгорнути',
+  collapse: 'Згорнути',
 };
 
 export default messages;

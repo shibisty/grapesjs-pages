@@ -18,6 +18,7 @@ import { findHostPanel, findSidebarHost } from './ui/host';
 import { openSettingsModal, openSyncModal } from './ui/modals';
 import { openConflictModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
 import { Sidebar } from './ui/Sidebar';
+import { type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
 
 export const PANEL_BUTTON_ID = 'pages-manager';
@@ -160,6 +161,15 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     }
   };
 
+  /** Moves a page before, after or inside another one; resolves to how many pages changed. */
+  const movePage = async (id: string, targetId: string, where: DropWhere): Promise<number> => {
+    const r = needRemote();
+    const pages = (await manager.list()).filter((p) => (p.kind || 'page') === 'page' && !p.templateId);
+    const changes = moveInTree(pages, id, targetId, where);
+    for (const c of changes) await r.update(c.id, { parentId: c.parentId, position: c.position });
+    return changes.length;
+  };
+
   /** A new page, layout or template, named "<Kind> <n>". */
   const createKind = async (kind: RecordKind): Promise<PageRecord> => {
     const base = kind === 'layout' ? t('layout') : kind === 'template' ? t('newTemplate') : t('defaultName');
@@ -209,6 +219,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     refresh: () => refresh(),
     resolve: (id, choice) => needRemote().resolve(id, choice),
     importLocal: () => importLocal(),
+    move: (id, targetId, where) => movePage(id, targetId, where),
   };
   ed.PagesManager = api;
 
@@ -365,6 +376,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       revisions: (id) => remote && void openRevisionsModal(editor, remote, t, id).catch(report),
       resolve: (id) => remote && void openConflictModal(editor, remote, t, id).catch(report),
       importLocal: () => void importLocal().catch(report),
+      move: (id, targetId, where) => void movePage(id, targetId, where).catch(report),
     }, remote);
 
     const container = editor.getContainer() as HTMLElement;

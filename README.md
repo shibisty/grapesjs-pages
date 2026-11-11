@@ -2,7 +2,7 @@
 
 A GrapesJS plugin that turns the editor into a small multi-page site editor:
 
-- **Pages sidebar** — create, rename, duplicate, delete and switch pages.
+- **Pages sidebar** — create, rename, duplicate, delete and switch pages; a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
 - **Local storage** — every page is kept in IndexedDB (or any custom `PageStore`) and autosaved.
 - **Per-page undo/redo** — `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`) work on the history of the page you are on.
 - **Copy/paste between pages** — `Ctrl+C` / `Ctrl+V` copy whole components *with their styles* from one page to another.
@@ -113,7 +113,11 @@ How it works:
   conflict dialog keeps mine, takes the server's, or keeps both (mine as a copy). Changes made
   elsewhere to records not edited here come in on refresh and reload the open one.
 - **Sidebar**: *Pages* as a tree (by `parentId`, then `position`), *Layouts*, *Templates*, *Site
-  styles*; each section has its own **+**. ✎ opens the properties: name, address (slug), parent,
+  styles*; each section has its own **+**. Pages are dragged into place: the upper quarter of a
+  row drops before it, the lower quarter after it, the middle inside it (never into the page's own
+  subtree); the new siblings are renumbered and saved. From the keyboard: Alt+↑/↓ reorder,
+  Alt+→ makes the page a child of the one above, Alt+← moves it out of its parent; →/← expand and
+  collapse (kept per browser), ↑/↓ move between rows. ✎ opens the properties: name, address (slug), parent,
   layout, SEO title and description, "show in the menu" (`values`: `seo.title`, `seo.description`,
   `in_menu`).
 - **Layouts** get a *Page slot* block (`<page-slot>`): the server puts the page there.
@@ -155,6 +159,7 @@ restore(id, revision)                     // into the draft, reopened
 refresh()                                 // read the server's lists now
 resolve(id, 'local' | 'remote' | 'both')
 importLocal(): Promise<number>
+move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what drag and drop does
 ```
 
 ### Events

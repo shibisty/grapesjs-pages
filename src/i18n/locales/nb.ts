@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Siden kommer her',
   slotBlock: 'Sideplass',
   refresh: 'Oppdater fra serveren',
+  search: 'Søk',
+  noMatches: 'Ingenting funnet',
+  expand: 'Utvid',
+  collapse: 'Skjul',
 };
 
 export default messages;

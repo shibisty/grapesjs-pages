@@ -44,6 +44,19 @@ export const CSS = `
 .gjsp.gjsp-floating{position:absolute;top:0;right:0;bottom:0;width:280px;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.35);background:var(--gjs-primary-color,#444)}
 .gjsp-toggle{position:absolute;top:8px;right:8px;z-index:60;background:var(--gjs-primary-color,#444);color:var(--gjs-font-color,#ddd);border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:6px 10px;cursor:pointer;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .gjsp-toggle:hover{background:rgba(255,255,255,.12)}
+.gjsp-searchbox{padding:0 10px 6px}
+.gjsp-search{width:100%;box-sizing:border-box;padding:5px 8px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.15);border-radius:3px;color:inherit;font:inherit}
+.gjsp-search:focus{outline:none;border-color:var(--gjs-quaternary-color,#d278c9)}
+.gjsp-empty{padding:10px;opacity:.6;font-size:12px}
+.gjsp-item.is-context .gjsp-name{opacity:.55}
+.gjsp-item.is-match .gjsp-name{font-weight:600}
+.gjsp-twisty{background:none;border:0;color:inherit;cursor:pointer;width:14px;padding:0;margin-inline-end:-4px;font-size:10px;opacity:.7;flex-shrink:0}
+.gjsp-twisty[disabled]{cursor:default;opacity:0}
+.gjsp-item[draggable=true]{cursor:grab}
+.gjsp-item.is-dragging{opacity:.4}
+.gjsp-item.drop-before{box-shadow:inset 0 2px 0 var(--gjs-quaternary-color,#d278c9)}
+.gjsp-item.drop-after{box-shadow:inset 0 -2px 0 var(--gjs-quaternary-color,#d278c9)}
+.gjsp-item.drop-inside{background:rgba(210,120,201,.18);outline:1px dashed var(--gjs-quaternary-color,#d278c9);outline-offset:-2px}
 .gjsp-section{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.65;cursor:default}
 .gjsp-section .gjsp-act{font-size:15px;opacity:1}
 .gjsp-item.has-conflict .gjsp-sub{color:#ffb74d;opacity:.9}

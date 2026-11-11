@@ -7,6 +7,7 @@ import type { RemoteEditor } from '../remote/RemoteEditor';
 import type { PageRecord, RecordKind } from '../types';
 import { fmt, report } from '../utils';
 import { h } from './dom';
+import { type DropWhere, keyboardMove, matches, pageTree, searchTree, subtree } from './tree';
 
 export interface SidebarActions {
   open(id: string): void;
@@ -26,34 +27,14 @@ export interface SidebarActions {
   revisions?(id: string): void;
   resolve?(id: string): void;
   importLocal?(): void;
+  /** Moves a page in the tree (drag and drop, Alt+arrows). */
+  move?(id: string, targetId: string, where: DropWhere): void;
 }
 
-/** Pages in tree order (parent before children, siblings by position, name) with their depth. */
-export function pageTree(pages: PageRecord[]): Array<{ rec: PageRecord; depth: number }> {
-  const ids = new Set(pages.map((p) => p.id));
-  const kids = new Map<string | null, PageRecord[]>();
-  pages.forEach((p) => {
-    const parent = p.parentId && ids.has(p.parentId) && p.parentId !== p.id ? p.parentId : null;
-    if (!kids.has(parent)) kids.set(parent, []);
-    kids.get(parent)!.push(p);
-  });
-  const order = (a: PageRecord, b: PageRecord): number =>
-    (a.position ?? 0) - (b.position ?? 0) || (a.slug === '/' ? -1 : b.slug === '/' ? 1 : 0) || a.name.localeCompare(b.name);
-  const out: Array<{ rec: PageRecord; depth: number }> = [];
-  const seen = new Set<string>();
-  const walk = (parent: string | null, depth: number): void => {
-    (kids.get(parent) || []).sort(order).forEach((p) => {
-      if (seen.has(p.id)) return; // a cycle
-      seen.add(p.id);
-      out.push({ rec: p, depth });
-      walk(p.id, depth + 1);
-    });
-  };
-  walk(null, 0);
-  // Pages caught in a parent cycle: at the top.
-  pages.filter((p) => !seen.has(p.id)).forEach((p) => out.push({ rec: p, depth: 0 }));
-  return out;
-}
+/** Meta key of the collapsed pages of the tree (remote mode). */
+export const COLLAPSED_META = 'collapsed';
+
+export { pageTree } from './tree';
 
 const FLASH_MS = 2500;
 
@@ -68,6 +49,10 @@ export class Sidebar {
   private readonly list: HTMLUListElement;
   private readonly btn: Record<'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'settings' | 'close', HTMLButtonElement>;
   private localCount = 0;
+  private readonly search: HTMLInputElement;
+  private query = '';
+  private collapsed = new Set<string>();
+  private dragId: string | null = null;
   private flashTimer: ReturnType<typeof setTimeout> | null = null;
   private renderQueued = false;
   private readonly offs: Array<() => void> = [];
@@ -95,6 +80,32 @@ export class Sidebar {
     this.title = h('span', { class: 'gjsp-title' });
     this.status = h('div', { class: 'gjsp-status', 'aria-live': 'polite' });
     this.list = h('ul', { class: 'gjsp-list', role: 'listbox' });
+    this.search = h('input', {
+      class: 'gjsp-search',
+      type: 'search',
+      autocomplete: 'off',
+      spellcheck: 'false',
+      oninput: () => {
+        this.query = this.search.value;
+        this.renderSoon();
+      },
+      onkeydown: (e: Event) => {
+        const k = (e as KeyboardEvent).key;
+        if (k === 'Escape' && this.search.value) {
+          e.stopPropagation();
+          this.search.value = '';
+          this.query = '';
+          this.renderSoon();
+        } else if (k === 'Enter') {
+          // Open the first match.
+          const first = this.list.querySelector<HTMLElement>('.gjsp-item.is-match, .gjsp-item:not(.is-context)');
+          if (first?.dataset.id) actions.open(first.dataset.id);
+        } else if (k === 'ArrowDown') {
+          e.preventDefault();
+          this.list.querySelector<HTMLElement>('.gjsp-item')?.focus();
+        }
+      },
+    });
     this.root = h(
       'div',
       { class: 'gjsp gjs-one-bg gjs-two-color', hidden: true },
@@ -113,9 +124,21 @@ export class Sidebar {
         )
       ),
       this.status,
+      h('div', { class: 'gjsp-searchbox' }, this.search),
       this.list
     );
-    if (remote) this.root.classList.add('gjsp-remote');
+    if (remote) {
+      this.root.classList.add('gjsp-remote');
+      void manager.store
+        .getMeta<string[]>(COLLAPSED_META)
+        .then((ids) => {
+          if (ids?.length) {
+            this.collapsed = new Set(ids);
+            this.renderSoon();
+          }
+        })
+        .catch(report);
+    }
     this.relabel();
 
     const on = (ev: string, fn: (...a: any[]) => void): void => {
@@ -161,6 +184,8 @@ export class Sidebar {
       this.btn[k].title = titles[k];
       this.btn[k].setAttribute('aria-label', titles[k]);
     });
+    this.search.placeholder = t('search');
+    this.search.setAttribute('aria-label', t('search'));
     this.root.setAttribute('dir', isRtlLocale(getLocale(this.editor)) ? 'rtl' : 'ltr');
     this.renderSoon();
   }
@@ -228,7 +253,7 @@ export class Sidebar {
     return `${time} · ${state}`;
   }
 
-  private row(r: PageRecord, depth = 0): HTMLLIElement {
+  private row(r: PageRecord, depth = 0, tree?: { parent: boolean; open: boolean; pages: PageRecord[] }): HTMLLIElement {
     const t = this.t;
     const a = this.actions;
     const act = (txt: string, title: string, fn: () => void): HTMLButtonElement =>
@@ -257,13 +282,48 @@ export class Sidebar {
         'data-id': r.id,
         onclick: () => a.open(r.id),
         onkeydown: (e: Event) => {
-          const k = (e as KeyboardEvent).key;
+          const ev = e as KeyboardEvent;
+          const k = ev.key;
           if (k === 'Enter' || k === ' ') {
             e.preventDefault();
             a.open(r.id);
+          } else if (tree && ev.altKey && a.move && k.startsWith('Arrow')) {
+            // Alt+arrows move the page in the tree.
+            const keys: Record<string, 'up' | 'down' | 'in' | 'out'> = { ArrowUp: 'up', ArrowDown: 'down', ArrowRight: 'in', ArrowLeft: 'out' };
+            const dir = keys[k];
+            const rtl = this.root.getAttribute('dir') === 'rtl';
+            const m = dir && keyboardMove(tree.pages, r.id, rtl && dir === 'in' ? 'out' : rtl && dir === 'out' ? 'in' : dir);
+            e.preventDefault();
+            if (m) a.move(r.id, m.targetId, m.where);
+          } else if (k === 'ArrowDown' || k === 'ArrowUp') {
+            e.preventDefault();
+            const items = [...this.list.querySelectorAll<HTMLElement>('.gjsp-item')];
+            const i = items.indexOf(e.currentTarget as HTMLElement);
+            items[i + (k === 'ArrowDown' ? 1 : -1)]?.focus();
+          } else if (tree?.parent && (k === 'ArrowRight' || k === 'ArrowLeft')) {
+            e.preventDefault();
+            this.toggle(r.id, k === (this.root.getAttribute('dir') === 'rtl' ? 'ArrowLeft' : 'ArrowRight'));
           }
         },
       },
+      tree
+        ? h(
+            'button',
+            {
+              class: 'gjsp-twisty',
+              type: 'button',
+              tabindex: '-1',
+              'aria-hidden': tree.parent ? false : 'true',
+              title: tree.parent ? (tree.open ? t('collapse') : t('expand')) : false,
+              disabled: !tree.parent,
+              onclick: (e: Event) => {
+                e.stopPropagation();
+                this.toggle(r.id, !tree.open);
+              },
+            },
+            tree.parent ? (tree.open ? '▾' : '▸') : ''
+          )
+        : null,
       h('span', { class: 'gjsp-dot' + (r.dirty || r.dirtyMeta || r.conflict ? ' is-dirty' : ''), title: t('unsynced') }, '●'),
       h(
         'div',
@@ -282,13 +342,76 @@ export class Sidebar {
     );
     if (depth) li.style.paddingInlineStart = `${10 + depth * 14}px`;
     if (r.conflict) li.classList.add('has-conflict');
+    if (tree && a.move) this.draggable(li, r.id, tree.pages);
     return li;
+  }
+
+  /** Expands or collapses a page of the tree (kept in the store's meta). */
+  toggle(id: string, open: boolean): void {
+    if (open) this.collapsed.delete(id);
+    else this.collapsed.add(id);
+    void this.manager.store.setMeta(COLLAPSED_META, [...this.collapsed]).catch(report);
+    this.renderSoon();
+  }
+
+  /**
+   * Drag and drop of a page row: the upper quarter of a row drops before
+   * it, the lower quarter after it, the middle inside it (as its last
+   * child). A page cannot go into its own subtree.
+   */
+  private draggable(li: HTMLLIElement, id: string, pages: PageRecord[]): void {
+    li.draggable = true;
+    const zone = (e: Event): DropWhere => {
+      const rect = li.getBoundingClientRect();
+      const y = (e as MouseEvent).clientY - rect.top;
+      if (!rect.height) return 'inside';
+      return y < rect.height / 4 ? 'before' : y > (rect.height * 3) / 4 ? 'after' : 'inside';
+    };
+    const clear = (): void => li.classList.remove('drop-before', 'drop-inside', 'drop-after');
+    li.addEventListener('dragstart', (e) => {
+      this.dragId = id;
+      li.classList.add('is-dragging');
+      const dt = (e as DragEvent).dataTransfer;
+      if (dt) {
+        dt.effectAllowed = 'move';
+        dt.setData('text/plain', id);
+      }
+    });
+    li.addEventListener('dragend', () => {
+      this.dragId = null;
+      li.classList.remove('is-dragging');
+      this.list.querySelectorAll('.drop-before, .drop-inside, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-inside', 'drop-after'));
+    });
+    li.addEventListener('dragover', (e) => {
+      const from = this.dragId;
+      if (!from || from === id) return;
+      const where = zone(e);
+      // Not a page of this tree, or into its own subtree: no drop here.
+      if (!pages.some((p) => p.id === from) || subtree(pages, from).has(id)) return;
+      e.preventDefault();
+      clear();
+      li.classList.add(`drop-${where}`);
+    });
+    li.addEventListener('dragleave', clear);
+    li.addEventListener('drop', (e) => {
+      const from = this.dragId;
+      clear();
+      if (!from || from === id) return;
+      e.preventDefault();
+      const where = zone(e);
+      this.dragId = null;
+      if (where === 'inside') this.collapsed.delete(id); // show where it went
+      this.actions.move?.(from, id, where);
+    });
   }
 
   async render(): Promise<void> {
     const rows = await this.manager.list();
     if (this.remote) this.renderRemote(rows);
-    else this.list.replaceChildren(...rows.map((r) => this.row(r)));
+    else {
+      const shown = rows.filter((r) => matches(r, this.query));
+      this.list.replaceChildren(...(shown.length || !rows.length ? shown.map((r) => this.row(r)) : [this.nothing()]));
+    }
     this.renderStatus();
     this.updateHistory();
   }
@@ -309,11 +432,21 @@ export class Sidebar {
       );
     // Entries (pages of a template) belong to grapesjs-storage's views.
     const pages = of('page').filter((r) => !r.templateId);
-    const items: HTMLLIElement[] = [head(t('pages'), 'page', t('newPage')), ...pageTree(pages).map(({ rec, depth }) => this.row(rec, depth))];
-    items.push(head(t('layouts'), 'layout', t('newLayout')), ...of('layout').map((r) => this.row(r)));
-    items.push(head(t('templates'), 'template', t('newTemplate')), ...of('template').map((r) => this.row(r)));
-    const site = of('site');
-    if (site.length) items.push(head(t('site'), null, ''), ...site.map((r) => this.row({ ...r, name: t('site') })));
+    // A search shows the matches with their ancestors, everything expanded.
+    const visible = searchTree(pages, this.query);
+    const tree = pageTree(pages, visible ? new Set() : this.collapsed).filter((row) => !visible || visible.has(row.rec.id));
+    const pageRows = tree.map(({ rec, depth, parent }) => {
+      const li = this.row(rec, depth, { parent, open: !!visible || !this.collapsed.has(rec.id), pages });
+      if (visible) li.classList.add(matches(rec, this.query) ? 'is-match' : 'is-context');
+      return li;
+    });
+    const plain = (k: RecordKind) => of(k).filter((r) => matches(r, this.query));
+    const site = of('site').filter((r) => matches({ ...r, name: t('site') }, this.query));
+    const items: HTMLLIElement[] = [head(t('pages'), 'page', t('newPage')), ...pageRows];
+    items.push(head(t('layouts'), 'layout', t('newLayout')), ...plain('layout').map((r) => this.row(r)));
+    items.push(head(t('templates'), 'template', t('newTemplate')), ...plain('template').map((r) => this.row(r)));
+    if (of('site').length && (!this.query || site.length)) items.push(head(t('site'), null, ''), ...site.map((r) => this.row({ ...r, name: t('site') })));
+    if (this.query && !pageRows.length && !plain('layout').length && !plain('template').length && !site.length) items.push(this.nothing());
     if (this.localCount && a.importLocal) {
       items.push(
         h(
@@ -327,6 +460,10 @@ export class Sidebar {
     const active = rows.find((r) => r.id === this.manager.activeId);
     this.btn.publish.disabled = !active || !!active.conflict;
     this.btn.revisions.disabled = !active;
+  }
+
+  private nothing(): HTMLLIElement {
+    return h('li', { class: 'gjsp-empty', role: 'presentation' }, this.t('noMatches'));
   }
 
   /** Remote mode: how many v1 local pages can be imported (0 hides the button). */

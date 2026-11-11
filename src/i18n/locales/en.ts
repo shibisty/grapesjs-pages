@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'The page goes here',
   slotBlock: 'Page slot',
   refresh: 'Refresh from the server',
+  search: 'Search',
+  noMatches: 'Nothing found',
+  expand: 'Expand',
+  collapse: 'Collapse',
 };
 
 export default messages;

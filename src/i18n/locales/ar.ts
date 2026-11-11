@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'هنا توضع الصفحة',
   slotBlock: 'موضع الصفحة',
   refresh: 'تحديث من الخادم',
+  search: 'بحث',
+  noMatches: 'لم يُعثر على شيء',
+  expand: 'توسيع',
+  collapse: 'طي',
 };
 
 export default messages;

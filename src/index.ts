@@ -25,6 +25,7 @@ export { RemotePageStore } from './remote/RemotePageStore';
 export type { RemoteState, RemoteStoreHooks } from './remote/RemotePageStore';
 export { RemoteEditor, normalizeSlug } from './remote/RemoteEditor';
 export { registerSlot, SLOT_BLOCK_ID } from './remote/slot';
-export { pageTree } from './ui/Sidebar';
+export { pageTree, moveInTree, keyboardMove, searchTree, subtree } from './ui/tree';
+export type { DropWhere, TreeMove, TreeRow } from './ui/tree';
 export { uuid } from './utils';
 export type * from './types';

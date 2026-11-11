@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Εδώ μπαίνει η σελίδα',
   slotBlock: 'Θέση σελίδας',
   refresh: 'Ανανέωση από τον διακομιστή',
+  search: 'Αναζήτηση',
+  noMatches: 'Δεν βρέθηκε τίποτα',
+  expand: 'Ανάπτυξη',
+  collapse: 'Σύμπτυξη',
 };
 
 export default messages;

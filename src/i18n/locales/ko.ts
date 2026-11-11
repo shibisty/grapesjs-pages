@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: '여기에 페이지가 들어갑니다',
   slotBlock: '페이지 슬롯',
   refresh: '서버에서 새로 고침',
+  search: '검색',
+  noMatches: '찾은 항목 없음',
+  expand: '펼치기',
+  collapse: '접기',
 };
 
 export default messages;

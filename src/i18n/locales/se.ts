@@ -84,6 +84,10 @@ const messages: PagesLabels = {
   slotLabel: 'Sidan hamnar här',
   slotBlock: 'Sidplats',
   refresh: 'Uppdatera från servern',
+  search: 'Sök',
+  noMatches: 'Inget hittades',
+  expand: 'Expandera',
+  collapse: 'Fäll ihop',
 };
 
 export default messages;

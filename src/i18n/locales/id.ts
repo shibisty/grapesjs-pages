@@ -83,6 +83,10 @@ const messages: PagesLabels = {
   slotLabel: 'Halaman ditempatkan di sini',
   slotBlock: 'Slot halaman',
   refresh: 'Muat ulang dari server',
+  search: 'Cari',
+  noMatches: 'Tidak ada yang ditemukan',
+  expand: 'Bentangkan',
+  collapse: 'Ciutkan',
 };
 
 export default messages;
