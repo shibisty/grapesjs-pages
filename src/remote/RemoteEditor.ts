@@ -4,7 +4,7 @@ import { EVENTS } from '../events';
 import type { Translator } from '../i18n';
 import { IndexedDbPageStore } from '../store/IndexedDbPageStore';
 import type { PageStore } from '../store/types';
-import type { PageRecord, RecordKind, RecordPatch, Revision } from '../types';
+import type { PageRecord, PublishMarkup, RecordKind, RecordPatch, RemoteOptions, Revision } from '../types';
 import { clone, uid } from '../utils';
 import { fromWire, SITE_ID } from './RemoteClient';
 import type { RemotePageStore } from './RemotePageStore';
@@ -40,7 +40,8 @@ export class RemoteEditor {
     private readonly manager: PagesManager,
     readonly store: RemotePageStore,
     private readonly t: Translator,
-    private readonly v1Store: () => PageStore = () => new IndexedDbPageStore()
+    private readonly v1Store: () => PageStore = () => new IndexedDbPageStore(),
+    private readonly markupHook: RemoteOptions['markup'] = null
   ) {}
 
   private emit(event: string, ...args: unknown[]): void {
@@ -102,6 +103,16 @@ export class RemoteEditor {
     return { html, css };
   }
 
+  /** `markup()` passed through the `markup` option. */
+  private async publishMarkup(kind: RecordKind, record: PageRecord): Promise<{ html: string; css: string }> {
+    const base = this.markup(kind);
+    if (!this.markupHook) return base;
+    const out: PublishMarkup = { ...base, kind, record: clone(record) };
+    const res = await this.markupHook(out);
+    const r = res || out;
+    return { html: String(r.html ?? base.html), css: String(r.css ?? base.css) };
+  }
+
   /**
    * Makes a record live. It is saved first (a conflict or an offline
    * server stops here). Pages, layouts and templates send their HTML and
@@ -114,7 +125,7 @@ export class RemoteEditor {
     if (!entry && id !== this.manager.activeId) await this.manager.open(id);
     if (id === this.manager.activeId) await this.manager.flush();
     rec = await this.store.pushNow(id);
-    const body = entry ? {} : kind === 'site' ? { css: this.markup(kind).css } : this.markup(kind);
+    const body = entry ? {} : kind === 'site' ? { css: (await this.publishMarkup(kind, rec)).css } : await this.publishMarkup(kind, rec);
     const res = await this.store.client.publish(kind, kind === 'site' ? SITE_ID : id, body, rec.remote?.version ?? null);
     const next = fromWire({ ...res.record, data: undefined, values: undefined }, kind, rec);
     await this.store.cache.put(next);

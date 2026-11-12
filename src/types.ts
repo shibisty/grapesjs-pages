@@ -88,6 +88,21 @@ export interface RemoteOptions {
   cache?: PageStore | null;
   /** `fetch` implementation (tests). */
   fetch?: typeof fetch;
+  /**
+   * Changes what a publish sends: gets the HTML and CSS of the open record
+   * (the site: its CSS) and returns them changed, or nothing to keep them.
+   * May be async. E.g. add the tags of another plugin's scripts.
+   */
+  markup?: ((out: PublishMarkup) => PublishMarkup | void | Promise<PublishMarkup | void>) | null;
+}
+
+/** What a publish sends; the argument and the result of `RemoteOptions.markup`. */
+export interface PublishMarkup {
+  html: string;
+  css: string;
+  /** The record being published (read-only). */
+  record: PageRecord;
+  kind: RecordKind;
 }
 
 export interface ServerSettings {

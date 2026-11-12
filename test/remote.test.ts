@@ -229,6 +229,27 @@ describe('remote mode: publishing and revisions', () => {
     expect(html.match(/<\/script>/g)).toHaveLength(1);
   });
 
+  it('the markup option changes what a publish sends', async () => {
+    server.seed('pages', ID(1), 'Home', { slug: '/', data: project('<p>hi</p>') });
+    const seen: any[] = [];
+    const s = await setup({
+      remote: {
+        url: server.base, fetch: server.fetch, cache: new MemoryPageStore(), refreshInterval: 0, retryDelay: 5,
+        markup: async (out: any) => {
+          seen.push(out);
+          await tick(1);
+          return { html: out.html + '<script src="https://cdn.example/x.js"></script>', css: '@import url(https://fonts.example/a.css);' + out.css };
+        },
+      },
+    });
+    s.editor.setComponents('<p>hi</p>');
+    await s.api.publish(ID(1));
+    const body = server.find('POST', `/pages/${ID(1)}/publish`)[0].body;
+    expect(body.html).toMatch(/<p[^>]*>hi<\/p><script src="https:\/\/cdn.example\/x.js"><\/script>$/);
+    expect(body.css.startsWith('@import url(https://fonts.example/a.css);')).toBe(true);
+    expect(seen[0]).toMatchObject({ kind: 'page', record: { id: ID(1) } });
+  });
+
   it('an entry publishes its values without HTML; the site publishes its CSS', async () => {
     server.seed('pages', ID(1), 'Home', { slug: '/' });
     server.seed('templates', ID(7), 'Product');

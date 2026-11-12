@@ -100,6 +100,7 @@ pages(editor, {
 | `retryDelay` | `2000` | First retry after a failed save, ms; doubles up to 60 s. |
 | `cacheDbName` | `<dbName>-remote-<hash of url>` | IndexedDB database of the cache. |
 | `cache` | IndexedDB | Your own `PageStore` as the cache (`MemoryPageStore` in tests). |
+| `markup` | — | `({ html, css, kind, record }) => ({ html, css })`, may be async: changes what a publish sends, e.g. adds the tags of another plugin's scripts or fonts. Return nothing to keep it. |
 
 How it works:
 

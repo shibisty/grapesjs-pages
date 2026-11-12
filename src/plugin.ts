@@ -84,7 +84,9 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     store = opts.store || new IndexedDbPageStore(opts.dbName);
   }
   const manager = new PagesManager(editor, store, opts, t);
-  const remote = rstore ? new RemoteEditor(editor, manager, rstore, t, () => new IndexedDbPageStore(opts.dbName)) : null;
+  const remote = rstore
+    ? new RemoteEditor(editor, manager, rstore, t, () => new IndexedDbPageStore(opts.dbName), opts.remote?.markup || null)
+    : null;
   const needRemote = (): RemoteEditor => {
     if (!remote) throw new Error('grapesjs-pages: remote mode only (the `remote` option)');
     return remote;
