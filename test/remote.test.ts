@@ -212,6 +212,23 @@ describe('remote mode: publishing and revisions', () => {
     expect(server.find('PUT', `/pages/${ID(1)}`).pop()!.headers['If-Match']).toBe(`"${live}"`);
   });
 
+  it("adds the components' scripts at the end of the HTML", async () => {
+    server.seed('pages', ID(1), 'Home', { slug: '/', data: project('<div class="tick">0</div>') });
+    const s = await setup();
+    s.editor.Components.addType('ticker', {
+      isComponent: (el: HTMLElement) => el.classList?.contains('tick'),
+      model: { defaults: { script: function (this: HTMLElement) { this.textContent = '</script>1'; } } },
+    });
+    s.editor.setComponents('<div class="tick">0</div>');
+    const events: any[] = [];
+    s.editor.on(EVENTS.publish, (e: any) => events.push(e));
+    click(sidebar().querySelector('.gjsp-head .gjsp-btn[title="Publish"]')!);
+    await until(() => events.length === 1);
+    const html: string = server.find('POST', `/pages/${ID(1)}/publish`)[0].body.html;
+    expect(html).toMatch(/^<div id="[^"]+" class="tick">0<\/div><script>[\s\S]*<\\\/script>1[\s\S]*<\/script>$/);
+    expect(html.match(/<\/script>/g)).toHaveLength(1);
+  });
+
   it('an entry publishes its values without HTML; the site publishes its CSS', async () => {
     server.seed('pages', ID(1), 'Home', { slug: '/' });
     server.seed('templates', ID(7), 'Product');

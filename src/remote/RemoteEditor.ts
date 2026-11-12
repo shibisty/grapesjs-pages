@@ -85,10 +85,17 @@ export class RemoteEditor {
     return rec;
   }
 
-  /** The canvas content as a page body (no <body> wrapper) and its CSS. */
+  /**
+   * The canvas content as a page body (no <body> wrapper) and its CSS.
+   * Components with a script (tabs, a countdown, a navbar's toggle…) add
+   * it at the end, as GrapesJS exports it; a server may keep or drop it
+   * (luna-pages keeps scripts only on sites that allow custom code).
+   */
   private markup(kind: RecordKind): { html: string; css: string } {
     const wrapper = this.editor.getWrapper();
-    const html = wrapper ? wrapper.getInnerHTML() : this.editor.getHtml();
+    let html = wrapper ? wrapper.getInnerHTML() : this.editor.getHtml();
+    const js = String((this.editor as any).getJs?.() || '').trim();
+    if (js) html += `<script>${js.replace(/<\/(script)/gi, '<\\/$1')}</script>`;
     // The site's CSS carries the base rules (box-sizing, body margin); the
     // other kinds leave them out so they are not repeated on every page.
     const css = (this.editor.getCss({ avoidProtected: kind !== 'site' } as any) as string) || '';

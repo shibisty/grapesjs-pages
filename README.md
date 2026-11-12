@@ -122,7 +122,9 @@ How it works:
   `in_menu`).
 - **Layouts** get a *Page slot* block (`<page-slot>`): the server puts the page there.
 - **Publish** (▲) saves, then sends `editor.getHtml()` without `<body>` and `editor.getCss()` (the
-  site: its CSS only, with the base rules; an entry: nothing). The server sanitizes and keeps
+  site: its CSS only, with the base rules; an entry: nothing). Components with a script (tabs, a
+  countdown…) add `editor.getJs()` as a `<script>` at the end of the HTML; the server decides
+  whether to keep it. The server sanitizes and keeps
   revisions; 🕘 lists them, and *Restore* makes one the draft again (not published).
 - **Import**: pages of the v1 local database (the same `dbName`) are offered once as new pages.
 
