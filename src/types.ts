@@ -151,6 +151,12 @@ export interface PagesOptions {
   settleMs?: number;
   /** Replace the Ctrl+C / Ctrl+V keymaps with cross-page copy/paste. */
   takeOverCopyPaste?: boolean;
+  /**
+   * With grapesjs-sidebar-tools 2.2+: show every opened page as a tab of
+   * its workspace (switch tabs = open the page). Default `true`; without
+   * sidebar-tools it does nothing.
+   */
+  workspaceTabs?: boolean;
   keys?: Partial<KeyBindings>;
   /** Project data for new pages, or a function returning it. */
   blank?: ProjectData | (() => ProjectData) | null;

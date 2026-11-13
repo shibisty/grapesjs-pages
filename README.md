@@ -78,6 +78,19 @@ On the first start (empty store) the current editor content — `components`,
 | `injectCss` | `boolean` | `true` | Inject the plugin CSS into `<head>`. |
 | `remote` | `RemoteOptions` | `null` | Remote mode (contract v2), see below. Without it the plugin is the local editor with manual sync. |
 | `slotTag` | `string` | `'page-slot'` | The element a layout marks the page's place with. |
+| `workspaceTabs` | `boolean` | `true` | With [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-tools) 2.2+: every opened page gets a tab in its document tab bar (see below). |
+
+## Page tabs (grapesjs-sidebar-tools)
+
+When [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-tools) 2.2+ is installed (before or after this plugin), every page you open gets a tab in its document tab bar above the canvas:
+
+- clicking a tab opens that page (saved as usual, with its own undo history);
+- `×` closes the tab only — the page stays in the list;
+- closing the tab of the page that is open opens the neighbour tab's page;
+- renamed pages update their tab, deleted pages lose it;
+- the tabs come back after a reload.
+
+There is no dependency on sidebar-tools: without it nothing changes. `workspaceTabs: false` turns the tabs off.
 
 ## Remote mode (contract v2)
 

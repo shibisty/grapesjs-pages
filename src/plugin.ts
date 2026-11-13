@@ -20,6 +20,7 @@ import { openConflictModal, openPropertiesModal, openRevisionsModal } from './ui
 import { Sidebar } from './ui/Sidebar';
 import { type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
+import { connectWorkspace } from './integration/workspace';
 
 export const PANEL_BUTTON_ID = 'pages-manager';
 
@@ -99,6 +100,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     else await manager.create();
   };
   const clipboard = new ComponentClipboard(editor, store, () => manager.activeId);
+  // With grapesjs-sidebar-tools 2.2+: every opened page is a tab of its workspace.
+  const disconnectWorkspace = opts.workspaceTabs ? connectWorkspace(editor, manager) : () => undefined;
   const sync = new SyncService(editor, manager, store, opts, t);
   let sidebar: Sidebar | null = null;
   let toggleBtn: HTMLButtonElement | null = null;
@@ -340,6 +343,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
   const cleanup = (): void => {
     if (disposed) return;
     disposed = true;
+    disconnectWorkspace();
     manager.destroy();
     rstore?.close();
     if (refreshTimer) clearInterval(refreshTimer);
