@@ -243,23 +243,37 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     });
   }
 
+  /**
+   * Our panel button, unless another plugin manages it: a docking plugin
+   * (grapesjs-sidebar-tools) gives each view a context of its own, keeps
+   * the buttons idle and shows the views itself; following the command
+   * with the button there would stop the view again.
+   */
+  const ownButton = (): any => {
+    const b = panelButtons?.get(PANEL_BUTTON_ID);
+    return b && !b.get('context') ? b : null;
+  };
   editor.Commands.add(COMMANDS.open, {
     run() {
       wantOpen = true;
       if (!sidebar) return;
-      // Our view replaces the other views of the switcher panel.
-      panelButtons?.forEach((b: any) => b.id !== PANEL_BUTTON_ID && b.get('active') && b.set('active', false));
+      // Our view replaces the other views of the switcher panel that share
+      // its context (a docking plugin gives each view a context of its own,
+      // so they can all be visible).
+      if (ownButton()) {
+        panelButtons?.forEach((b: any) => b.id !== PANEL_BUTTON_ID && b.get('active') && !b.get('context') && b.set('active', false));
+      }
       sidebar.show();
       // `listen` follows the command in GrapesJS 0.21, not in 0.23: keep the
       // button in step ourselves (the command is already active, so the
-      // button's own run is a no-op).
-      const ours = panelButtons?.get(PANEL_BUTTON_ID);
+      // button's own run is a no-op) — unless a layout plugin manages it.
+      const ours = ownButton();
       if (ours && !ours.get('active')) ours.set('active', true);
     },
     stop() {
       wantOpen = false;
       sidebar?.hide();
-      const ours = panelButtons?.get(PANEL_BUTTON_ID);
+      const ours = ownButton();
       if (ours?.get('active')) ours.set('active', false);
     },
   });
@@ -408,6 +422,9 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       // if it was opened from code and its button is not active.
       const onActive = (b: any): void => {
         if (b.id === PANEL_BUTTON_ID || !b.get('active')) return;
+        // A view in another context (e.g. docked by grapesjs-sidebar-tools)
+        // is shown next to ours, not instead of it.
+        if (b.get('context') !== ours?.get('context')) return;
         if (ours?.get('active')) ours.set('active', false);
         if (sidebar?.isOpen) editor.stopCommand(COMMANDS.open);
       };
@@ -433,7 +450,13 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
         container.appendChild(toggleBtn);
       }
     }
-    if (wantOpen) editor.runCommand(COMMANDS.open);
+    // The command ran before the sidebar existed (a layout plugin runs every
+    // view's command at start): GrapesJS counts it as active and would skip
+    // a second run, so show the sidebar directly.
+    if (wantOpen) {
+      if (editor.Commands.isActive(COMMANDS.open)) sidebar.show();
+      else editor.runCommand(COMMANDS.open);
+    }
   };
 
   const start = async (): Promise<void> => {

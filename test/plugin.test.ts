@@ -38,6 +38,34 @@ describe('UI mounting', () => {
     expect(sidebar().hidden).toBe(true);
   });
 
+  it('views in another context (docked by a layout plugin) stay next to ours', async () => {
+    const s = await createEditor();
+    editor = s.editor;
+    const btns = editor.Panels.getPanel('views')!.get('buttons')!;
+    // grapesjs-sidebar-tools gives every docked view a context of its own.
+    btns.forEach((b: any) => b.set('context', `dock-${b.id}`));
+    btns.get('open-sm')!.set('active', true);
+    editor.runCommand(COMMANDS.open);
+    expect(sidebar().hidden).toBe(false);
+    expect(btns.get('open-sm')!.get('active')).toBe(true);
+    btns.get('open-layers')!.set('active', true);
+    expect(sidebar().hidden).toBe(false);
+    // The docking plugin puts the button back to idle; that stops nothing.
+    btns.get(PANEL_BUTTON_ID)!.set('active', false);
+    expect(btns.get('open-layers')!.get('active')).toBe(true);
+  });
+
+  it('a view command run before the sidebar exists shows it once mounted', async () => {
+    // As grapesjs-sidebar-tools does: run every view's command at start.
+    const s = await createEditor({ noWait: true });
+    editor = s.editor;
+    editor.runCommand(COMMANDS.open);
+    expect(editor.Commands.isActive(COMMANDS.open)).toBe(true);
+    await s.api.whenReady();
+    await tick(10);
+    expect(sidebar().hidden).toBe(false);
+  });
+
   it('toggle command and the close button', async () => {
     const s = await createEditor();
     editor = s.editor;
