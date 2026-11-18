@@ -1,4 +1,6 @@
-# grapesjs-pages
+# grapesjs-site-pages
+
+(The repository is `grapesjs-pages`; on npm that name belongs to another package, so this one is published as `grapesjs-site-pages`. The build files keep their names: `grapesjs-pages.js`, `grapesjs-pages.umd.cjs`, global `grapesjsPages`.)
 
 A GrapesJS plugin that turns the editor into a small multi-page site editor:
 
@@ -17,12 +19,12 @@ for the design and the roadmap towards a CMS.
 ## Installation
 
 ```bash
-npm install grapesjs-pages
+npm install grapesjs-site-pages
 ```
 
 ```js
 import grapesjs from 'grapesjs';
-import pages from 'grapesjs-pages';
+import pages from 'grapesjs-site-pages';
 
 grapesjs.init({
   container: '#gjs',
@@ -248,7 +250,7 @@ pages/<address>/         project.json, body.html, style.css, index.html   (/ →
   pages, parents before children; a record the server refuses is reported in
   `ImportReport.errors` and the rest goes on.
 
-The format alone (no DOM, no GrapesJS) is `grapesjs-pages/archive`
+The format alone (no DOM, no GrapesJS) is `grapesjs-site-pages/archive`
 (`packArchive`, `readArchive`, `archiveFiles`, `readArchiveFiles`,
 `importOrder`, `compose`), e.g. for a server that keeps a site as that
 folder tree.
