@@ -19,7 +19,7 @@ import { FakeServerV2 } from './helpers/fakeServerV2';
 
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const project = (html: string, css = '') =>
-  ({ assets: [], styles: css || [], pages: [{ frames: [{ component: { type: 'wrapper', components: html } }] }] }) as any;
+  ({ assets: [], styles: [], pages: [{ frames: [{ component: { type: 'wrapper', components: (css ? `<style>${css}</style>` : '') + html } }] }] }) as any;
 
 const unzip = (b: Uint8Array): Record<string, string> =>
   Object.fromEntries(Object.entries(unzipSync(b)).map(([k, v]) => [k, strFromU8(v)]));
@@ -93,9 +93,9 @@ describe('archive format', () => {
     const back = readArchiveFiles(files);
     expect(back.edited.sort()).toEqual([ID(3), 'site'].sort());
     const home = back.records.find((r) => r.id === ID(3))!;
-    expect((home.data as any).pages[0].frames[0].component).toBe('<p>edited elsewhere</p>');
-    expect((home.data as any).styles).toBe('p{x:y}');
-    expect((back.records.find((r) => r.id === 'site')!.data as any).styles).toBe('body{margin:1px}');
+    expect((home.data as any).pages[0].frames[0].component).toBe('<style>p{x:y}</style><p>edited elsewhere</p>');
+    expect((home.data as any).styles).toEqual([]);
+    expect((back.records.find((r) => r.id === 'site')!.data as any).pages[0].frames[0].component).toBe('<style>body{margin:1px}</style>');
     // Untouched records keep their project.
     expect(back.records.find((r) => r.id === ID(1))!.data).toEqual(recs[1].data);
   });
@@ -104,7 +104,7 @@ describe('archive format', () => {
     const files = archiveFiles(recs);
     delete files['pages/index/project.json'];
     const home = readArchiveFiles(files).records.find((r) => r.id === ID(3))!;
-    expect((home.data as any).pages[0].frames[0].component).toBe('<p>home</p>');
+    expect((home.data as any).pages[0].frames[0].component).toBe('<style>p{x:y}</style><p>home</p>');
   });
 
   it('accepts a ZIP of the folder (one top folder)', () => {
@@ -199,6 +199,7 @@ describe('local mode', () => {
     await s.api.open(m.records[0].id, { force: true });
     await tick(20);
     expect(s.editor.getHtml()).toContain('<h2 class="x">Edited</h2>');
+    expect(s.editor.getHtml()).not.toContain('<style');
     expect(s.editor.getCss()).toContain('.x{color:blue;}');
   });
 

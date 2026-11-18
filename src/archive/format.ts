@@ -243,13 +243,18 @@ const parseJson = (s: string | undefined, what: string): any => {
   }
 };
 
-/** A project built from markup edited outside GrapesJS. */
+/**
+ * A project built from markup edited outside GrapesJS. The CSS goes in as a
+ * `<style>` before the HTML: GrapesJS' parser moves it into the project's
+ * rules (a CSS string in `styles` is not a format it loads).
+ */
 export function projectFromMarkup(html: string, css: string, base?: ProjectData | null): ProjectData {
   const b = (base || {}) as any;
+  const style = css.trim() ? `<style>${css.replace(/<\/style/gi, '<\\/style')}</style>` : '';
   return {
     ...(b.assets ? { assets: b.assets } : { assets: [] }),
-    styles: css || [],
-    pages: [{ ...(b.pages?.[0] || {}), frames: [{ component: html }] }],
+    styles: [],
+    pages: [{ ...(b.pages?.[0] || {}), frames: [{ component: style + html }] }],
   } as unknown as ProjectData;
 }
 
@@ -287,7 +292,7 @@ export function readArchiveFiles(files: Record<string, string>): ReadArchive {
       data = projectFromMarkup(html ?? '', css ?? '', data);
     } else if (e.kind === 'site' && cssChanged) {
       edited.push(e.id);
-      data = { ...((data || {}) as any), styles: css } as ProjectData;
+      data = projectFromMarkup('', css ?? '', data);
     }
     const rec: ArchiveRecord = { id: e.id, kind: e.kind, name: String(e.name || '').trim() || e.kind, data: data ?? null };
     if (e.kind === 'page') {

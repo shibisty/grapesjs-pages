@@ -174,6 +174,8 @@ describe('RemotePageStore', () => {
   });
 
   it('a refused write is an error for that record, not a retry loop', async () => {
+    // The plugin logs the refusal; expected here, kept out of the test output.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     server.seed('pages', ID(9), 'Taken', { slug: '/taken' });
     await store.put(local(ID(1), { slug: '/taken', dirtyMeta: true }));
     await store.run();
@@ -186,6 +188,8 @@ describe('RemotePageStore', () => {
     await store.run();
     expect(store.state).toBe('idle');
     expect(server.colls.pages.get(ID(1))!.slug).toBe('/free');
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 
   it('a tombstone is deleted on the server with If-Match, then dropped', async () => {
