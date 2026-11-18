@@ -135,7 +135,8 @@ describe('remote mode: editing', () => {
     click(sidebar().querySelector('[data-create="layout"]')!);
     await until(() => names('layout').length === 1);
     expect(names('layout')).toEqual(['Layout 1']);
-    expect(s.editor.Blocks.get(SLOT_BLOCK_ID)).toBeTruthy();
+    // The block comes with the layout's open, which may finish after the list shows it.
+    await until(() => !!s.editor.Blocks.get(SLOT_BLOCK_ID));
     s.editor.getWrapper()!.append('<header>Shop</header><page-slot></page-slot><footer>©</footer>');
     await saved(s);
     expect(server.colls.layouts.size).toBe(1);
