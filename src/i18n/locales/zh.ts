@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: '未找到任何内容',
   expand: '展开',
   collapse: '折叠',
+
+  /* ---- site archive ---- */
+  exportArchive: '导出站点（ZIP）',
+  importArchive: '导入站点归档',
+  exportHint: '页面、布局、带字段的模板，以及站点的样式和设置。不包含条目和字段值。',
+  exportHintLocal: '此浏览器中的页面，打包为 ZIP。',
+  exportHtml: '添加每条记录的 HTML 和 CSS（每条都会打开一次）',
+  download: '下载',
+  exporting: '正在导出… %s',
+  exported: '归档已就绪',
+  archiveFile: '归档（.zip）',
+  importMode: '此处已存在的记录：',
+  modeReplace: '更新它们（按 id；页面也按地址，布局或模板按名称匹配）',
+  modeCopy: '保留它们，并将归档作为副本添加',
+  importSite: '同时导入站点的样式和设置',
+  importBtn: '导入',
+  importing: '正在导入… %s',
+  importDone: '已导入：新增 %s，更新 %s。',
+  importFromMarkup: '来自编辑过的 HTML：%s。',
+  importSkipped: '已跳过：%s。',
+  importErrors: '失败：%s',
+  badArchive: '不是站点归档：%s',
 };
 
 export default messages;

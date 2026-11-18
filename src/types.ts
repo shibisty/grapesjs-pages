@@ -2,6 +2,7 @@ import type { ProjectData } from 'grapesjs';
 import type { PagesLabels } from './i18n/types';
 import type { PageStore } from './store/types';
 import type { SyncService } from './sync/SyncService';
+import type { ExportOptions, ImportOptions, ImportReport } from './archive/ArchiveService';
 
 export type { ProjectData };
 
@@ -179,6 +180,11 @@ export interface PagesOptions {
   remote?: RemoteOptions | null;
   /** The element a layout marks the page's place with. */
   slotTag?: string;
+  /**
+   * File name of a downloaded site archive, without `.zip` (or a function
+   * returning it). Default: the site's name (or `site`) and the date.
+   */
+  archiveName?: string | (() => string);
 }
 
 export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'labels' | 'remote'>> {
@@ -190,6 +196,8 @@ export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'l
 export interface OpenOptions {
   force?: boolean;
   skipFlush?: boolean;
+  /** No `open` event (no tab, no reaction of other plugins): a passing load, e.g. to render an export. */
+  silent?: boolean;
 }
 
 export interface RemoveOptions {
@@ -285,4 +293,17 @@ export interface PagesManagerApi {
    * pages changed (0: not possible, e.g. into its own subtree).
    */
   move(id: string, targetId: string, where: 'before' | 'inside' | 'after'): Promise<number>;
+
+  /* ---- site archive (both modes) ---- */
+
+  /**
+   * The site as a ZIP (`manifest.json`, a folder per record with its
+   * project, HTML and CSS): pages; in remote mode also layouts, templates
+   * with their fields, and the site. No entries, no field values.
+   */
+  exportArchive(opts?: ExportOptions): Promise<Uint8Array>;
+  /** `exportArchive()` saved as a file by the browser. */
+  downloadArchive(opts?: ExportOptions): Promise<void>;
+  /** Writes an archive's records here (see `ImportOptions`). */
+  importArchive(file: Blob | ArrayBuffer | Uint8Array, opts?: ImportOptions): Promise<ImportReport>;
 }

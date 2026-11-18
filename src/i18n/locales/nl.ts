@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Niets gevonden',
   expand: 'Uitvouwen',
   collapse: 'Samenvouwen',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Site exporteren (ZIP)',
+  importArchive: 'Sitearchief importeren',
+  exportHint: 'Pagina’s, lay-outs, sjablonen met hun velden en de stijlen en instellingen van de site. Items en veldwaarden zijn niet inbegrepen.',
+  exportHintLocal: 'De pagina’s van deze browser als ZIP.',
+  exportHtml: 'HTML en CSS van elk record toevoegen (elk wordt één keer geopend)',
+  download: 'Downloaden',
+  exporting: 'Exporteren… %s',
+  exported: 'Het archief is klaar',
+  archiveFile: 'Archief (.zip)',
+  importMode: 'Records die hier al bestaan:',
+  modeReplace: 'Bijwerken (op id; een pagina ook op adres, een lay-out of sjabloon op naam)',
+  modeCopy: 'Behouden en het archief als kopieën toevoegen',
+  importSite: 'Ook de stijlen en instellingen van de site importeren',
+  importBtn: 'Importeren',
+  importing: 'Importeren… %s',
+  importDone: 'Geïmporteerd: %s nieuw, %s bijgewerkt.',
+  importFromMarkup: 'Uit bewerkte HTML: %s.',
+  importSkipped: 'Overgeslagen: %s.',
+  importErrors: 'Mislukt: %s',
+  badArchive: 'Geen sitearchief: %s',
 };
 
 export default messages;

@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Ничего не найдено',
   expand: 'Развернуть',
   collapse: 'Свернуть',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Экспорт сайта (ZIP)',
+  importArchive: 'Импорт архива сайта',
+  exportHint: 'Страницы, макеты, шаблоны с их полями, стили и настройки сайта. Записи и значения полей не входят.',
+  exportHintLocal: 'Страницы этого браузера в ZIP.',
+  exportHtml: 'Добавить HTML и CSS каждой записи (каждая откроется один раз)',
+  download: 'Скачать',
+  exporting: 'Экспорт… %s',
+  exported: 'Архив готов',
+  archiveFile: 'Архив (.zip)',
+  importMode: 'Записи, которые уже есть здесь:',
+  modeReplace: 'Обновить (по id; страницу также по адресу, макет и шаблон по имени)',
+  modeCopy: 'Оставить и добавить архив копиями',
+  importSite: 'Импортировать также стили и настройки сайта',
+  importBtn: 'Импортировать',
+  importing: 'Импорт… %s',
+  importDone: 'Импортировано: новых %s, обновлено %s.',
+  importFromMarkup: 'Из изменённого HTML: %s.',
+  importSkipped: 'Пропущено: %s.',
+  importErrors: 'Не удалось: %s',
+  badArchive: 'Это не архив сайта: %s',
 };
 
 export default messages;

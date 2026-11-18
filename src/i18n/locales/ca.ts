@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'No s’ha trobat res',
   expand: 'Desplega',
   collapse: 'Plega',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Exporta el lloc (ZIP)',
+  importArchive: 'Importa un arxiu del lloc',
+  exportHint: 'Pàgines, dissenys, plantilles amb els seus camps i els estils i la configuració del lloc. No inclou entrades ni valors de camps.',
+  exportHintLocal: 'Les pàgines d’aquest navegador en un ZIP.',
+  exportHtml: 'Afegeix l’HTML i el CSS de cada registre (cadascun s’obre una vegada)',
+  download: 'Baixa',
+  exporting: 'S’està exportant… %s',
+  exported: 'L’arxiu és a punt',
+  archiveFile: 'Arxiu (.zip)',
+  importMode: 'Registres que ja existeixen aquí:',
+  modeReplace: 'Actualitza’ls (per id; una pàgina també per l’adreça, un disseny o plantilla pel nom)',
+  modeCopy: 'Conserva’ls i afegeix l’arxiu com a còpies',
+  importSite: 'Importa també els estils i la configuració del lloc',
+  importBtn: 'Importa',
+  importing: 'S’està important… %s',
+  importDone: 'Importat: %s nous, %s actualitzats.',
+  importFromMarkup: 'Des d’HTML editat: %s.',
+  importSkipped: 'Omesos: %s.',
+  importErrors: 'Han fallat: %s',
+  badArchive: 'No és un arxiu del lloc: %s',
 };
 
 export default messages;

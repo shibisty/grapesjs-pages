@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Нічого не знайдено',
   expand: 'Розгорнути',
   collapse: 'Згорнути',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Експорт сайту (ZIP)',
+  importArchive: 'Імпорт архіву сайту',
+  exportHint: 'Сторінки, макети, шаблони з їхніми полями, стилі та налаштування сайту. Записи й значення полів не входять.',
+  exportHintLocal: 'Сторінки цього браузера в ZIP.',
+  exportHtml: 'Додати HTML і CSS кожного запису (кожен відкриється один раз)',
+  download: 'Завантажити',
+  exporting: 'Експорт… %s',
+  exported: 'Архів готовий',
+  archiveFile: 'Архів (.zip)',
+  importMode: 'Записи, які вже є тут:',
+  modeReplace: 'Оновити (за id; сторінку також за адресою, макет і шаблон за назвою)',
+  modeCopy: 'Залишити й додати архів копіями',
+  importSite: 'Імпортувати також стилі та налаштування сайту',
+  importBtn: 'Імпортувати',
+  importing: 'Імпорт… %s',
+  importDone: 'Імпортовано: нових %s, оновлено %s.',
+  importFromMarkup: 'Зі зміненого HTML: %s.',
+  importSkipped: 'Пропущено: %s.',
+  importErrors: 'Не вдалося: %s',
+  badArchive: 'Це не архів сайту: %s',
 };
 
 export default messages;

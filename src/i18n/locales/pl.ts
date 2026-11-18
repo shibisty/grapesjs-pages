@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Nic nie znaleziono',
   expand: 'Rozwiń',
   collapse: 'Zwiń',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Eksportuj witrynę (ZIP)',
+  importArchive: 'Importuj archiwum witryny',
+  exportHint: 'Strony, układy, szablony z polami oraz style i ustawienia witryny. Wpisy i wartości pól nie są dołączane.',
+  exportHintLocal: 'Strony z tej przeglądarki jako ZIP.',
+  exportHtml: 'Dodaj HTML i CSS każdego rekordu (każdy zostanie otwarty raz)',
+  download: 'Pobierz',
+  exporting: 'Eksport… %s',
+  exported: 'Archiwum jest gotowe',
+  archiveFile: 'Archiwum (.zip)',
+  importMode: 'Rekordy, które już tu istnieją:',
+  modeReplace: 'Zaktualizuj (wg id; stronę także wg adresu, układ lub szablon wg nazwy)',
+  modeCopy: 'Zachowaj i dodaj archiwum jako kopie',
+  importSite: 'Importuj też style i ustawienia witryny',
+  importBtn: 'Importuj',
+  importing: 'Import… %s',
+  importDone: 'Zaimportowano: nowe %s, zaktualizowane %s.',
+  importFromMarkup: 'Z edytowanego HTML: %s.',
+  importSkipped: 'Pominięto: %s.',
+  importErrors: 'Nie powiodło się: %s',
+  badArchive: 'To nie jest archiwum witryny: %s',
 };
 
 export default messages;

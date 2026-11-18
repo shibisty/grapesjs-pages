@@ -21,6 +21,8 @@ import { Sidebar } from './ui/Sidebar';
 import { type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
 import { connectWorkspace } from './integration/workspace';
+import { ArchiveService, type ExportOptions, type ImportOptions, type ImportReport } from './archive/ArchiveService';
+import { openExportModal, openImportModal, type ArchiveActions } from './ui/archiveModals';
 
 export const PANEL_BUTTON_ID = 'pages-manager';
 
@@ -191,6 +193,53 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     return n;
   };
 
+  /* ---------------- site archive ---------------- */
+
+  const archive = new ArchiveService(editor, manager, store, remote);
+
+  const exportArchive = async (o?: ExportOptions): Promise<Uint8Array> => {
+    const bytes = await archive.exportBytes(o);
+    editor.trigger(EVENTS.exported, { bytes });
+    return bytes;
+  };
+
+  const archiveFileName = async (): Promise<string> => {
+    const n = opts.archiveName;
+    const given = typeof n === 'function' ? n() : n;
+    if (given) return `${given}.zip`;
+    const site = (await store.get('site'))?.name;
+    const d = new Date();
+    const p = (x: number) => String(x).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+    const base = (site || 'site').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'site';
+    return `${base}-${stamp}.zip`;
+  };
+
+  const downloadArchive = async (o?: ExportOptions): Promise<void> => {
+    const bytes = await exportArchive(o);
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/zip' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = await archiveFileName();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+
+  const importArchive = async (file: Blob | ArrayBuffer | Uint8Array, o?: ImportOptions): Promise<ImportReport> => {
+    const r = await archive.import(file, o);
+    editor.trigger(EVENTS.imported, r);
+    sidebar?.flash(fmt(t('importDone'), r.created, r.updated));
+    return r;
+  };
+
+  const archiveActions: ArchiveActions = {
+    isRemote: !!remote,
+    download: (o) => downloadArchive(o),
+    import: (f, o) => importArchive(f, o),
+  };
+
   const api: PagesManagerApi = {
     list: () => manager.list(),
     open: (id, o) => manager.open(id, o),
@@ -226,6 +275,9 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     resolve: (id, choice) => needRemote().resolve(id, choice),
     importLocal: () => importLocal(),
     move: (id, targetId, where) => movePage(id, targetId, where),
+    exportArchive: (o) => exportArchive(o),
+    downloadArchive: (o) => downloadArchive(o),
+    importArchive: (f, o) => importArchive(f, o),
   };
   ed.PagesManager = api;
 
@@ -292,6 +344,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
   editor.Commands.add(COMMANDS.settings, { run: () => void openSettingsModal(editor, sync, t) });
   editor.Commands.add(COMMANDS.publish, { run: () => void publish().catch(report) });
   editor.Commands.add(COMMANDS.refresh, { run: () => void refresh().catch(report) });
+  editor.Commands.add(COMMANDS.exportArchive, { run: () => void openExportModal(editor, t, archiveActions) });
+  editor.Commands.add(COMMANDS.importArchive, { run: () => void openImportModal(editor, t, archiveActions) });
   editor.Commands.add(COMMANDS.revisions, {
     run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
       const id = o.id || manager.activeId;
@@ -405,6 +459,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       resolve: (id) => remote && void openConflictModal(editor, remote, t, id).catch(report),
       importLocal: () => void importLocal().catch(report),
       move: (id, targetId, where) => void movePage(id, targetId, where).catch(report),
+      exportArchive: () => void openExportModal(editor, t, archiveActions),
+      importArchive: () => void openImportModal(editor, t, archiveActions),
     }, remote);
 
     const container = editor.getContainer() as HTMLElement;

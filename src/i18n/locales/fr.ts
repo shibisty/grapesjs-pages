@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Aucun résultat',
   expand: 'Déplier',
   collapse: 'Replier',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Exporter le site (ZIP)',
+  importArchive: 'Importer une archive du site',
+  exportHint: 'Pages, mises en page, modèles avec leurs champs, styles et réglages du site. Les entrées et les valeurs des champs ne sont pas incluses.',
+  exportHintLocal: 'Les pages de ce navigateur en ZIP.',
+  exportHtml: 'Ajouter le HTML et le CSS de chaque élément (chacun est ouvert une fois)',
+  download: 'Télécharger',
+  exporting: 'Export… %s',
+  exported: 'L’archive est prête',
+  archiveFile: 'Fichier d’archive (.zip)',
+  importMode: 'Éléments déjà présents ici :',
+  modeReplace: 'Les mettre à jour (par id ; une page aussi par son adresse, une mise en page ou un modèle par son nom)',
+  modeCopy: 'Les garder et ajouter l’archive en copies',
+  importSite: 'Importer aussi les styles et réglages du site',
+  importBtn: 'Importer',
+  importing: 'Import… %s',
+  importDone: 'Importé : %s nouveaux, %s mis à jour.',
+  importFromMarkup: 'Depuis du HTML modifié : %s.',
+  importSkipped: 'Ignorés : %s.',
+  importErrors: 'Échec : %s',
+  badArchive: 'Ce n’est pas une archive de site : %s',
 };
 
 export default messages;

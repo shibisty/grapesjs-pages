@@ -88,6 +88,28 @@ const messages: PagesLabels = {
   noMatches: 'Inget hittades',
   expand: 'Expandera',
   collapse: 'Fäll ihop',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Exportera webbplatsen (ZIP)',
+  importArchive: 'Importera ett webbplatsarkiv',
+  exportHint: 'Sidor, layouter, mallar med sina fält samt webbplatsens stilar och inställningar. Poster och fältvärden ingår inte.',
+  exportHintLocal: 'Sidorna i den här webbläsaren som ZIP.',
+  exportHtml: 'Lägg till HTML och CSS för varje post (var och en öppnas en gång)',
+  download: 'Ladda ner',
+  exporting: 'Exporterar… %s',
+  exported: 'Arkivet är klart',
+  archiveFile: 'Arkiv (.zip)',
+  importMode: 'Poster som redan finns här:',
+  modeReplace: 'Uppdatera dem (efter id; en sida även efter adress, en layout eller mall efter namn)',
+  modeCopy: 'Behåll dem och lägg till arkivet som kopior',
+  importSite: 'Importera även webbplatsens stilar och inställningar',
+  importBtn: 'Importera',
+  importing: 'Importerar… %s',
+  importDone: 'Importerat: %s nya, %s uppdaterade.',
+  importFromMarkup: 'Från redigerad HTML: %s.',
+  importSkipped: 'Överhoppade: %s.',
+  importErrors: 'Misslyckades: %s',
+  badArchive: 'Inte ett webbplatsarkiv: %s',
 };
 
 export default messages;

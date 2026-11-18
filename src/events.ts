@@ -24,6 +24,10 @@ export const EVENTS = {
   conflict: 'pages-manager:conflict',
   /** Remote mode: the connection state changed. Payload: `'idle' | 'saving' | 'offline' | 'error'`. */
   remote: 'pages-manager:remote',
+  /** A site archive was made. Payload: `{ bytes: Uint8Array }`. */
+  exported: 'pages-manager:exported',
+  /** A site archive was imported. Payload: the `ImportReport`. */
+  imported: 'pages-manager:imported',
 } as const;
 
 /** Command ids registered by the plugin. */
@@ -38,4 +42,8 @@ export const COMMANDS = {
   revisions: 'pages-manager:revisions',
   properties: 'pages-manager:properties',
   refresh: 'pages-manager:refresh',
+  /** Opens the export dialog of the site archive. */
+  exportArchive: 'pages-manager:export',
+  /** Opens the import dialog of the site archive. */
+  importArchive: 'pages-manager:import',
 } as const;

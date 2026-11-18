@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Hiçbir şey bulunamadı',
   expand: 'Genişlet',
   collapse: 'Daralt',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Siteyi dışa aktar (ZIP)',
+  importArchive: 'Site arşivini içe aktar',
+  exportHint: 'Sayfalar, düzenler, alanlarıyla şablonlar ve sitenin stilleri ile ayarları. Girdiler ve alan değerleri dahil değildir.',
+  exportHintLocal: 'Bu tarayıcının sayfaları ZIP olarak.',
+  exportHtml: 'Her kaydın HTML ve CSS’ini ekle (her biri bir kez açılır)',
+  download: 'İndir',
+  exporting: 'Dışa aktarılıyor… %s',
+  exported: 'Arşiv hazır',
+  archiveFile: 'Arşiv (.zip)',
+  importMode: 'Burada zaten var olan kayıtlar:',
+  modeReplace: 'Güncelle (kimliğe göre; sayfa ayrıca adresine, düzen veya şablon adına göre)',
+  modeCopy: 'Koru ve arşivi kopya olarak ekle',
+  importSite: 'Sitenin stillerini ve ayarlarını da içe aktar',
+  importBtn: 'İçe aktar',
+  importing: 'İçe aktarılıyor… %s',
+  importDone: 'İçe aktarıldı: %s yeni, %s güncellendi.',
+  importFromMarkup: 'Düzenlenmiş HTML’den: %s.',
+  importSkipped: 'Atlandı: %s.',
+  importErrors: 'Başarısız: %s',
+  badArchive: 'Site arşivi değil: %s',
 };
 
 export default messages;

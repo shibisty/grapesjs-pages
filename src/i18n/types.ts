@@ -105,4 +105,33 @@ export interface PagesLabels {
   noMatches: string;
   expand: string;
   collapse: string;
+
+  /* ---- site archive ---- */
+  exportArchive: string;
+  importArchive: string;
+  exportHint: string;
+  exportHintLocal: string;
+  exportHtml: string;
+  download: string;
+  /** %s — done/total */
+  exporting: string;
+  exported: string;
+  archiveFile: string;
+  importMode: string;
+  modeReplace: string;
+  modeCopy: string;
+  importSite: string;
+  importBtn: string;
+  /** %s — done/total */
+  importing: string;
+  /** %s — created, %s — updated */
+  importDone: string;
+  /** %s — count */
+  importFromMarkup: string;
+  /** %s — count */
+  importSkipped: string;
+  /** %s — list */
+  importErrors: string;
+  /** %s — reason */
+  badArchive: string;
 }

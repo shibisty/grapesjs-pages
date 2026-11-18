@@ -27,6 +27,23 @@ export function normalizeSlug(raw: string): string {
 
 const kindOf = (r: PageRecord): RecordKind => r.kind || 'page';
 
+/**
+ * The canvas content as a page body (no <body> wrapper) and its CSS.
+ * Components with a script (tabs, a countdown, a navbar's toggle…) add
+ * it at the end, as GrapesJS exports it; a server may keep or drop it
+ * (luna-pages keeps scripts only on sites that allow custom code).
+ */
+export function canvasMarkup(editor: Editor, kind: RecordKind): { html: string; css: string } {
+  const wrapper = editor.getWrapper();
+  let html = wrapper ? wrapper.getInnerHTML() : editor.getHtml();
+  const js = String((editor as any).getJs?.() || '').trim();
+  if (js) html += `<script>${js.replace(/<\/(script)/gi, '<\\/$1')}</script>`;
+  // The site's CSS carries the base rules (box-sizing, body margin); the
+  // other kinds leave them out so they are not repeated on every page.
+  const css = (editor.getCss({ avoidProtected: kind !== 'site' } as any) as string) || '';
+  return { html, css };
+}
+
 /** The meta key a v1 database gets once imported into a server. */
 export const importedKey = (url: string): string => `importedTo:${url}`;
 
@@ -86,26 +103,9 @@ export class RemoteEditor {
     return rec;
   }
 
-  /**
-   * The canvas content as a page body (no <body> wrapper) and its CSS.
-   * Components with a script (tabs, a countdown, a navbar's toggle…) add
-   * it at the end, as GrapesJS exports it; a server may keep or drop it
-   * (luna-pages keeps scripts only on sites that allow custom code).
-   */
-  private markup(kind: RecordKind): { html: string; css: string } {
-    const wrapper = this.editor.getWrapper();
-    let html = wrapper ? wrapper.getInnerHTML() : this.editor.getHtml();
-    const js = String((this.editor as any).getJs?.() || '').trim();
-    if (js) html += `<script>${js.replace(/<\/(script)/gi, '<\\/$1')}</script>`;
-    // The site's CSS carries the base rules (box-sizing, body margin); the
-    // other kinds leave them out so they are not repeated on every page.
-    const css = (this.editor.getCss({ avoidProtected: kind !== 'site' } as any) as string) || '';
-    return { html, css };
-  }
-
-  /** `markup()` passed through the `markup` option. */
-  private async publishMarkup(kind: RecordKind, record: PageRecord): Promise<{ html: string; css: string }> {
-    const base = this.markup(kind);
+  /** The open record's markup as a publish sends it (through the `markup` option). */
+  async publishMarkup(kind: RecordKind, record: PageRecord): Promise<{ html: string; css: string }> {
+    const base = canvasMarkup(this.editor, kind);
     if (!this.markupHook) return base;
     const out: PublishMarkup = { ...base, kind, record: clone(record) };
     const res = await this.markupHook(out);

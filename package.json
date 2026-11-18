@@ -1,7 +1,7 @@
 {
   "name": "grapesjs-pages",
-  "version": "2.4.0",
-  "description": "GrapesJS plugin: a Pages sidebar — pages in IndexedDB with per-page undo/redo, copy/paste between pages and manual REST sync, or (remote mode) a server-first CMS editor with layouts, templates, a page tree, publishing and revisions.",
+  "version": "2.5.0",
+  "description": "GrapesJS plugin: a Pages sidebar \u2014 pages in IndexedDB with per-page undo/redo, copy/paste between pages and manual REST sync, or (remote mode) a server-first CMS editor with layouts, templates, a page tree, publishing and revisions; the whole site exports to and imports from a ZIP archive.",
   "type": "module",
   "main": "./dist/grapesjs-pages.umd.cjs",
   "module": "./dist/grapesjs-pages.js",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/grapesjs-pages.js",
       "require": "./dist/grapesjs-pages.umd.cjs"
+    },
+    "./archive": {
+      "types": "./dist/archive/index.d.ts",
+      "import": "./dist/archive.js",
+      "default": "./dist/archive.js"
     }
   },
   "files": [
@@ -23,7 +28,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
+    "build": "vite build && vite build --config vite.archive.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -51,8 +56,13 @@
     "sync",
     "layouts",
     "publishing",
-    "offline"
+    "offline",
+    "export",
+    "import"
   ],
   "author": "Alexander Shibisty",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
 }

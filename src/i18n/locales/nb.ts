@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Ingenting funnet',
   expand: 'Utvid',
   collapse: 'Skjul',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Eksporter nettstedet (ZIP)',
+  importArchive: 'Importer et nettstedsarkiv',
+  exportHint: 'Sider, oppsett, maler med feltene sine og nettstedets stiler og innstillinger. Oppføringer og feltverdier er ikke med.',
+  exportHintLocal: 'Sidene i denne nettleseren som ZIP.',
+  exportHtml: 'Legg til HTML og CSS for hver post (hver åpnes én gang)',
+  download: 'Last ned',
+  exporting: 'Eksporterer… %s',
+  exported: 'Arkivet er klart',
+  archiveFile: 'Arkiv (.zip)',
+  importMode: 'Poster som allerede finnes her:',
+  modeReplace: 'Oppdater dem (etter id; en side også etter adresse, et oppsett eller en mal etter navn)',
+  modeCopy: 'Behold dem og legg til arkivet som kopier',
+  importSite: 'Importer også nettstedets stiler og innstillinger',
+  importBtn: 'Importer',
+  importing: 'Importerer… %s',
+  importDone: 'Importert: %s nye, %s oppdatert.',
+  importFromMarkup: 'Fra redigert HTML: %s.',
+  importSkipped: 'Hoppet over: %s.',
+  importErrors: 'Mislyktes: %s',
+  badArchive: 'Ikke et nettstedsarkiv: %s',
 };
 
 export default messages;

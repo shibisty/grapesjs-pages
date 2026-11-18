@@ -27,6 +27,9 @@ export interface SidebarActions {
   revisions?(id: string): void;
   resolve?(id: string): void;
   importLocal?(): void;
+  /** Opens the export / import dialogs of the site archive. */
+  exportArchive?(): void;
+  importArchive?(): void;
   /** Moves a page in the tree (drag and drop, Alt+arrows). */
   move?(id: string, targetId: string, where: DropWhere): void;
 }
@@ -47,7 +50,10 @@ export class Sidebar {
   private readonly title: HTMLSpanElement;
   private readonly status: HTMLDivElement;
   private readonly list: HTMLUListElement;
-  private readonly btn: Record<'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'settings' | 'close', HTMLButtonElement>;
+  private readonly btn: Record<
+    'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'exportArchive' | 'importArchive' | 'settings' | 'close',
+    HTMLButtonElement
+  >;
   private localCount = 0;
   private readonly search: HTMLInputElement;
   private query = '';
@@ -74,6 +80,8 @@ export class Sidebar {
       publish: tool('▲', () => actions.publish?.()),
       revisions: tool('🕘', () => this.manager.activeId && actions.revisions?.(this.manager.activeId)),
       sync: tool('⟳', () => actions.sync()),
+      exportArchive: tool('⤓', () => actions.exportArchive?.()),
+      importArchive: tool('⤒', () => actions.importArchive?.()),
       settings: tool('⚙', () => actions.settings()),
       close: tool('✕', () => actions.close()),
     };
@@ -177,6 +185,8 @@ export class Sidebar {
       publish: t('publish'),
       revisions: t('revisions'),
       sync: this.remote ? t('refresh') : t('sync'),
+      exportArchive: t('exportArchive'),
+      importArchive: t('importArchive'),
       settings: t('settings'),
       close: t('close'),
     };

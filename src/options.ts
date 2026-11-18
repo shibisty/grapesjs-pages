@@ -25,6 +25,7 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   injectCss: true,
   remote: null,
   slotTag: 'page-slot',
+  archiveName: '',
 };
 
 const TAG_RE = /^[a-z][a-z0-9]*-[a-z0-9-]*$/;
@@ -60,6 +61,7 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
     labels: { ...(o.labels || {}) },
     remote: o.remote && typeof o.remote.url === 'string' && o.remote.url.trim() ? { ...o.remote } : null,
     // A custom element name: lower case with a dash.
+    archiveName: typeof o.archiveName === 'string' || typeof o.archiveName === 'function' ? o.archiveName : '',
     slotTag: typeof o.slotTag === 'string' && TAG_RE.test(o.slotTag) ? o.slotTag : DEFAULT_OPTIONS.slotTag,
   };
 }

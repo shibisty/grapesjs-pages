@@ -78,6 +78,7 @@ On the first start (empty store) the current editor content — `components`,
 | `injectCss` | `boolean` | `true` | Inject the plugin CSS into `<head>`. |
 | `remote` | `RemoteOptions` | `null` | Remote mode (contract v2), see below. Without it the plugin is the local editor with manual sync. |
 | `slotTag` | `string` | `'page-slot'` | The element a layout marks the page's place with. |
+| `archiveName` | `string \| () => string` | site name + date | File name (without `.zip`) of a downloaded site archive. |
 | `workspaceTabs` | `boolean` | `true` | With [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-tools) 2.2+: every opened page gets a tab in its document tab bar (see below). |
 
 ## Page tabs (grapesjs-sidebar-tools)
@@ -176,6 +177,11 @@ refresh()                                 // read the server's lists now
 resolve(id, 'local' | 'remote' | 'both')
 importLocal(): Promise<number>
 move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what drag and drop does
+
+// site archive (both modes)
+exportArchive({ html? = true, onProgress? }): Promise<Uint8Array>   // the ZIP
+downloadArchive({ html?, onProgress? })                              // saved by the browser
+importArchive(file, { mode? = 'replace' | 'copy', site?, onProgress? }): Promise<ImportReport>
 ```
 
 ### Events
@@ -193,15 +199,59 @@ move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what dra
 | `publish` | `pages-manager:published` | `{ record, revision, warnings }` (remote) |
 | `conflict` | `pages-manager:conflict` | `PageRecord` (remote) |
 | `remote` | `pages-manager:remote` | `'idle' \| 'saving' \| 'offline' \| 'error'` (remote) |
+| `exported` | `pages-manager:exported` | `{ bytes }` |
+| `imported` | `pages-manager:imported` | `ImportReport` |
 
 ### Commands
 
 `pages-manager:open`, `pages-manager:toggle`, `pages-manager:copy`,
-`pages-manager:paste`, `pages-manager:sync`, `pages-manager:settings`; remote mode:
+`pages-manager:paste`, `pages-manager:sync`, `pages-manager:settings`,
+`pages-manager:export`, `pages-manager:import` (the archive dialogs); remote mode:
 `pages-manager:publish`, `pages-manager:refresh`, `pages-manager:revisions` and
 `pages-manager:properties` (both take `{ id }`, default the open record).
 `core:undo` / `core:redo` are redefined to use the per-page history, so the
 undo/redo buttons of presets keep working.
+
+## Site archive
+
+The sidebar's ⤓ and ⤒ buttons export the site to a ZIP and import one back
+(`exportArchive()` / `importArchive()`). It holds the **designs**: pages; in
+remote mode also layouts, templates with their field lists, and the site's
+styles and settings. Entries of templates and field values are content and
+are not in it.
+
+```
+manifest.json            format, version, the records with their header fields
+site/                    project.json, style.css, settings.json
+layouts/<name>/          project.json, body.html, style.css
+templates/<name>/        project.json, body.html, style.css, index.html, fields.json
+pages/<address>/         project.json, body.html, style.css, index.html   (/ → pages/index)
+```
+
+- `project.json` is the GrapesJS project: what an import reads back.
+- `body.html` and `style.css` are what a publish would send (scripts and the
+  `remote.markup` hook included); `index.html` is a standalone preview (the
+  site's CSS, the page inside its layout). Making them opens every record in
+  the editor once; `{ html: false }` exports the projects only.
+- Work on them in another tool and import the ZIP back: a `body.html` or
+  `style.css` whose hash no longer matches the manifest is taken instead of
+  the project (GrapesJS parses it; component settings it cannot see in plain
+  HTML are lost). A record with markup and no `project.json` is built the
+  same way. A ZIP of the folder (with one top folder) is accepted.
+- **Import modes.** `replace` (default): a record that exists (same id; a
+  page also by its address, a layout or template by its name) is
+  overwritten, the rest is created with the archive's ids — importing into
+  another site keeps the ids, so a second import updates. `copy`: all new
+  ids, references (layout, parent) follow, taken addresses get `-2`, `-3`…;
+  the site record is left alone unless `site: true`.
+- Remote mode writes one record at a time, layouts and templates before
+  pages, parents before children; a record the server refuses is reported in
+  `ImportReport.errors` and the rest goes on.
+
+The format alone (no DOM, no GrapesJS) is `grapesjs-pages/archive`
+(`packArchive`, `readArchive`, `archiveFiles`, `readArchiveFiles`,
+`importOrder`, `compose`), e.g. for a server that keeps a site as that
+folder tree.
 
 ## Storage
 

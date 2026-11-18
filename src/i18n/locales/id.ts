@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Tidak ada yang ditemukan',
   expand: 'Bentangkan',
   collapse: 'Ciutkan',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Ekspor situs (ZIP)',
+  importArchive: 'Impor arsip situs',
+  exportHint: 'Halaman, tata letak, templat beserta kolomnya, serta gaya dan pengaturan situs. Entri dan nilai kolom tidak disertakan.',
+  exportHintLocal: 'Halaman dari peramban ini sebagai ZIP.',
+  exportHtml: 'Tambahkan HTML dan CSS setiap catatan (masing-masing dibuka sekali)',
+  download: 'Unduh',
+  exporting: 'Mengekspor… %s',
+  exported: 'Arsip sudah siap',
+  archiveFile: 'Arsip (.zip)',
+  importMode: 'Catatan yang sudah ada di sini:',
+  modeReplace: 'Perbarui (menurut id; halaman juga menurut alamat, tata letak atau templat menurut nama)',
+  modeCopy: 'Pertahankan dan tambahkan arsip sebagai salinan',
+  importSite: 'Impor juga gaya dan pengaturan situs',
+  importBtn: 'Impor',
+  importing: 'Mengimpor… %s',
+  importDone: 'Diimpor: %s baru, %s diperbarui.',
+  importFromMarkup: 'Dari HTML yang diedit: %s.',
+  importSkipped: 'Dilewati: %s.',
+  importErrors: 'Gagal: %s',
+  badArchive: 'Bukan arsip situs: %s',
 };
 
 export default messages;

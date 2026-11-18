@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Không tìm thấy gì',
   expand: 'Mở rộng',
   collapse: 'Thu gọn',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Xuất trang web (ZIP)',
+  importArchive: 'Nhập kho lưu trữ trang web',
+  exportHint: 'Trang, bố cục, mẫu kèm trường, cùng kiểu và cài đặt của trang web. Không gồm mục nhập và giá trị trường.',
+  exportHintLocal: 'Các trang của trình duyệt này dưới dạng ZIP.',
+  exportHtml: 'Thêm HTML và CSS của mỗi bản ghi (mỗi bản ghi được mở một lần)',
+  download: 'Tải xuống',
+  exporting: 'Đang xuất… %s',
+  exported: 'Kho lưu trữ đã sẵn sàng',
+  archiveFile: 'Kho lưu trữ (.zip)',
+  importMode: 'Các bản ghi đã có ở đây:',
+  modeReplace: 'Cập nhật (theo id; trang cũng theo địa chỉ, bố cục hoặc mẫu theo tên)',
+  modeCopy: 'Giữ lại và thêm kho lưu trữ thành bản sao',
+  importSite: 'Nhập cả kiểu và cài đặt của trang web',
+  importBtn: 'Nhập',
+  importing: 'Đang nhập… %s',
+  importDone: 'Đã nhập: %s mới, %s được cập nhật.',
+  importFromMarkup: 'Từ HTML đã sửa: %s.',
+  importSkipped: 'Bỏ qua: %s.',
+  importErrors: 'Thất bại: %s',
+  badArchive: 'Không phải kho lưu trữ trang web: %s',
 };
 
 export default messages;

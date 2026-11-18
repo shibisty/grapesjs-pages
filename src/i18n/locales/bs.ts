@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Ništa nije pronađeno',
   expand: 'Proširi',
   collapse: 'Skupi',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Izvezi stranicu (ZIP)',
+  importArchive: 'Uvezi arhivu stranice',
+  exportHint: 'Stranice, rasporedi, šabloni s poljima te stilovi i postavke stranice. Unosi i vrijednosti polja nisu uključeni.',
+  exportHintLocal: 'Stranice iz ovog preglednika kao ZIP.',
+  exportHtml: 'Dodaj HTML i CSS svakog zapisa (svaki se otvara jednom)',
+  download: 'Preuzmi',
+  exporting: 'Izvoz… %s',
+  exported: 'Arhiva je spremna',
+  archiveFile: 'Arhiva (.zip)',
+  importMode: 'Zapisi koji već postoje ovdje:',
+  modeReplace: 'Ažuriraj ih (po id-u; stranicu i po adresi, raspored ili šablon po nazivu)',
+  modeCopy: 'Zadrži ih i dodaj arhivu kao kopije',
+  importSite: 'Uvezi i stilove i postavke stranice',
+  importBtn: 'Uvezi',
+  importing: 'Uvoz… %s',
+  importDone: 'Uvezeno: %s novih, %s ažurirano.',
+  importFromMarkup: 'Iz uređenog HTML-a: %s.',
+  importSkipped: 'Preskočeno: %s.',
+  importErrors: 'Nije uspjelo: %s',
+  badArchive: 'Nije arhiva stranice: %s',
 };
 
 export default messages;

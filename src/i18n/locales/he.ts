@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'לא נמצא דבר',
   expand: 'הרחבה',
   collapse: 'כיווץ',
+
+  /* ---- site archive ---- */
+  exportArchive: 'ייצוא האתר (ZIP)',
+  importArchive: 'ייבוא ארכיון אתר',
+  exportHint: 'דפים, פריסות, תבניות עם השדות שלהן, וסגנונות והגדרות האתר. רשומות וערכי שדות אינם כלולים.',
+  exportHintLocal: 'הדפים של דפדפן זה כ־ZIP.',
+  exportHtml: 'הוספת HTML ו־CSS של כל רשומה (כל אחת נפתחת פעם אחת)',
+  download: 'הורדה',
+  exporting: 'מייצא… %s',
+  exported: 'הארכיון מוכן',
+  archiveFile: 'ארכיון (.zip)',
+  importMode: 'רשומות שכבר קיימות כאן:',
+  modeReplace: 'לעדכן אותן (לפי מזהה; דף גם לפי כתובת, פריסה או תבנית לפי שם)',
+  modeCopy: 'לשמור אותן ולהוסיף את הארכיון כעותקים',
+  importSite: 'לייבא גם את הסגנונות וההגדרות של האתר',
+  importBtn: 'ייבוא',
+  importing: 'מייבא… %s',
+  importDone: 'יובאו: %s חדשים, %s עודכנו.',
+  importFromMarkup: 'מ־HTML ערוך: %s.',
+  importSkipped: 'דולגו: %s.',
+  importErrors: 'נכשלו: %s',
+  badArchive: 'זה אינו ארכיון אתר: %s',
 };
 
 export default messages;

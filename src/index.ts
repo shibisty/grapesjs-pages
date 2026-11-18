@@ -29,3 +29,22 @@ export { pageTree, moveInTree, keyboardMove, searchTree, subtree } from './ui/tr
 export type { DropWhere, TreeMove, TreeRow } from './ui/tree';
 export { uuid } from './utils';
 export type * from './types';
+export { ArchiveService } from './archive/ArchiveService';
+export type { ExportOptions, ImportOptions, ImportMode, ImportReport } from './archive/ArchiveService';
+export {
+  ARCHIVE_FORMAT,
+  ARCHIVE_VERSION,
+  ArchiveError,
+  archiveFiles,
+  packArchive,
+  readArchive,
+  readArchiveFiles,
+  importOrder,
+  compose,
+  contentHash,
+  projectFromMarkup,
+  recordDirs,
+  safeName,
+} from './archive/format';
+export type { ArchiveRecord, ArchiveManifest, ManifestEntry, ReadArchive } from './archive/format';
+export { canvasMarkup } from './remote/RemoteEditor';

@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'چیزی پیدا نشد',
   expand: 'باز کردن',
   collapse: 'بستن',
+
+  /* ---- site archive ---- */
+  exportArchive: 'خروجی گرفتن از سایت (ZIP)',
+  importArchive: 'وارد کردن بایگانی سایت',
+  exportHint: 'صفحه‌ها، چیدمان‌ها، قالب‌ها با فیلدهایشان و سبک‌ها و تنظیمات سایت. ورودی‌ها و مقادیر فیلدها شامل نمی‌شوند.',
+  exportHintLocal: 'صفحه‌های این مرورگر به صورت ZIP.',
+  exportHtml: 'افزودن HTML و CSS هر رکورد (هر کدام یک بار باز می‌شود)',
+  download: 'دانلود',
+  exporting: 'در حال خروجی… %s',
+  exported: 'بایگانی آماده است',
+  archiveFile: 'بایگانی (.zip)',
+  importMode: 'رکوردهایی که از قبل اینجا هستند:',
+  modeReplace: 'به‌روزرسانی (بر اساس شناسه؛ صفحه همچنین با نشانی، چیدمان یا قالب با نام)',
+  modeCopy: 'نگه داشتن و افزودن بایگانی به صورت رونوشت',
+  importSite: 'وارد کردن سبک‌ها و تنظیمات سایت نیز',
+  importBtn: 'وارد کردن',
+  importing: 'در حال وارد کردن… %s',
+  importDone: 'وارد شد: %s جدید، %s به‌روز شد.',
+  importFromMarkup: 'از HTML ویرایش‌شده: %s.',
+  importSkipped: 'رد شد: %s.',
+  importErrors: 'ناموفق: %s',
+  badArchive: 'بایگانی سایت نیست: %s',
 };
 
 export default messages;

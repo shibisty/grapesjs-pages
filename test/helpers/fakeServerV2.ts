@@ -19,6 +19,7 @@ export interface V2Record {
   position?: number;
   data: ProjectData | null;
   values: Record<string, unknown>;
+  fields?: unknown[];
   revisions: Array<{ revision: number; html: string; css: string; data: ProjectData | null; created_at: string }>;
 }
 
@@ -200,6 +201,7 @@ export class FakeServerV2 {
         : this.seed(coll, id, body.name, { version: 0 });
       next.name = body.name;
       if (body.data !== undefined) next.data = body.data;
+      if (coll === 'templates') next.fields = body.fields !== undefined ? body.fields : next.fields || [];
       if (coll === 'pages') {
         let slug = body.slug !== undefined ? body.slug : next.slug || slugify(body.name);
         if (!slug || slug === '/-') slug = '/page';

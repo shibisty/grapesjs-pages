@@ -241,7 +241,7 @@ export class PagesManager {
     return rec;
   }
 
-  async open(id: string, { force = false, skipFlush = false }: OpenOptions = {}): Promise<void> {
+  async open(id: string, { force = false, skipFlush = false, silent = false }: OpenOptions = {}): Promise<void> {
     if (id === this.active && !force) return;
     if (!skipFlush) await this.flush();
     const rec = await this.store.get(id);
@@ -254,7 +254,7 @@ export class PagesManager {
     else this.hist.set(id, new SnapshotHistory(str, this.opts.historyLimit));
     this.emitHistory();
     this.emitChange();
-    this.emit(EVENTS.open, rec);
+    if (!silent) this.emit(EVENTS.open, rec);
   }
 
   async create({ name, data, ...extra }: CreateInit = {}): Promise<PageRecord> {

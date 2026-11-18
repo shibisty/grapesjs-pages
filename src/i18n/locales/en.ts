@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: 'Nothing found',
   expand: 'Expand',
   collapse: 'Collapse',
+
+  /* ---- site archive ---- */
+  exportArchive: 'Export the site (ZIP)',
+  importArchive: 'Import a site archive',
+  exportHint: 'Pages, layouts, templates with their fields, and the site’s styles and settings. Entries and field values are not included.',
+  exportHintLocal: 'The pages of this browser as a ZIP.',
+  exportHtml: 'Add the HTML and CSS of every record (each one is opened once)',
+  download: 'Download',
+  exporting: 'Exporting… %s',
+  exported: 'The archive is ready',
+  archiveFile: 'Archive (.zip)',
+  importMode: 'Records that already exist here:',
+  modeReplace: 'Update them (matched by id; a page also by its address, a layout or template by its name)',
+  modeCopy: 'Keep them and add the archive as copies',
+  importSite: 'Also import the site’s styles and settings',
+  importBtn: 'Import',
+  importing: 'Importing… %s',
+  importDone: 'Imported: %s new, %s updated.',
+  importFromMarkup: 'From edited HTML: %s.',
+  importSkipped: 'Skipped: %s.',
+  importErrors: 'Failed: %s',
+  badArchive: 'Not a site archive: %s',
 };
 
 export default messages;

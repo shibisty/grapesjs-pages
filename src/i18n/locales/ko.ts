@@ -87,6 +87,28 @@ const messages: PagesLabels = {
   noMatches: '찾은 항목 없음',
   expand: '펼치기',
   collapse: '접기',
+
+  /* ---- site archive ---- */
+  exportArchive: '사이트 내보내기(ZIP)',
+  importArchive: '사이트 아카이브 가져오기',
+  exportHint: '페이지, 레이아웃, 필드가 있는 템플릿, 사이트의 스타일과 설정. 항목과 필드 값은 포함되지 않습니다.',
+  exportHintLocal: '이 브라우저의 페이지를 ZIP으로.',
+  exportHtml: '각 레코드의 HTML과 CSS 추가(각각 한 번씩 열림)',
+  download: '다운로드',
+  exporting: '내보내는 중… %s',
+  exported: '아카이브가 준비되었습니다',
+  archiveFile: '아카이브(.zip)',
+  importMode: '여기에 이미 있는 레코드:',
+  modeReplace: '업데이트(id 기준, 페이지는 주소, 레이아웃과 템플릿은 이름으로도)',
+  modeCopy: '유지하고 아카이브를 사본으로 추가',
+  importSite: '사이트의 스타일과 설정도 가져오기',
+  importBtn: '가져오기',
+  importing: '가져오는 중… %s',
+  importDone: '가져옴: 새로 %s, 업데이트 %s.',
+  importFromMarkup: '편집된 HTML에서: %s.',
+  importSkipped: '건너뜀: %s.',
+  importErrors: '실패: %s',
+  badArchive: '사이트 아카이브가 아닙니다: %s',
 };
 
 export default messages;
