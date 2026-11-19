@@ -54,11 +54,30 @@ export async function destroyEditor(editor: Editor | undefined): Promise<void> {
     /* already gone */
   }
   await new Promise((r) => setTimeout(r, 30));
+  // GrapesJS wraps SelectComponent.onSelect in a debounce, and destroy()
+  // itself deselects — so a call can still be queued after the teardown. On
+  // a slower machine (Windows) it fires during the next test and crashes on
+  // the destroyed model ("Cannot read properties of undefined (reading
+  // 'lastComponent')"). Cancel it after destroy() and let the rest drain here.
+  const em = editor.getModel() as unknown as Record<string, unknown>;
+  const selectCmd = (() => {
+    try {
+      return editor.Commands.get('select-comp') as unknown as { onSelect?: { cancel?: () => void } } | undefined;
+    } catch {
+      return undefined;
+    }
+  })();
   try {
     editor.destroy();
   } catch {
     /* jsdom teardown noise */
   }
+  selectCmd?.onSelect?.cancel?.();
+  // Other debounced views (ClassTagsView.componentChanged…) only ask what is
+  // selected: the dead model answers "nothing".
+  em.getSelected = () => undefined;
+  em.getSelectedAll = () => [];
+  await new Promise((r) => setTimeout(r, 20));
   document.body.innerHTML = '';
 }
 
