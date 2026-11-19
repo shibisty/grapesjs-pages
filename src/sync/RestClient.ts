@@ -7,6 +7,8 @@ export interface RemotePageMeta {
   name: string;
   version: string | number;
   updatedAt?: number | string;
+  /** Only for a linked component (`'component'`); pages have none. */
+  kind?: 'component';
 }
 
 /** A full page from `GET /pages/{id}`. */
@@ -88,7 +90,8 @@ export class RestClient {
     if (version != null) headers['If-Match'] = `"${version}"`;
     return this.request<RemotePageMeta>('PUT', `/pages/${encodeURIComponent(rec.id)}`, {
       headers,
-      body: { id: rec.id, name: rec.name, data: rec.data, updatedAt: rec.updatedAt },
+      // `kind` only for a linked component: v1 pages are sent as before.
+      body: { id: rec.id, name: rec.name, data: rec.data, updatedAt: rec.updatedAt, ...(rec.kind === 'component' ? { kind: 'component' } : {}) },
     });
   }
 

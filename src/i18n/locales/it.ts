@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Nessun risultato',
   expand: 'Espandi',
   collapse: 'Comprimi',
+  components: 'Componenti',
+  newComponent: 'Nuovo componente',
+  componentName: 'Componente',
+  saveAsComponent: 'Salva come componente',
+  promptComponentName: 'Nome del componente',
+  editComponent: 'Modifica componente',
+  detachComponent: 'Scollega dal componente',
+  confirmRemoveComponent: 'Eliminare il componente «%s»? Dove è usato, resterà una semplice copia.',
+  componentSaved: 'Componente «%s» salvato',
+  editingComponent: 'Componente «%s»: le modifiche si applicano a tutte le pagine',
+  backTo: '← Torna a «%s»',
 };
 
 export default messages;

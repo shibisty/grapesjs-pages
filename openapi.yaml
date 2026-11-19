@@ -140,6 +140,13 @@ components:
         updatedAt:
           type: number
           description: Client time of the last local edit (ms). Informational.
+        kind:
+          type: string
+          enum: [component]
+          description: >
+            Only for a linked component (grapesjs-pages 2.5+); pages have none.
+            Store it and send it back in GET responses; a server that drops it
+            still works (the editor keeps the kind it already knows).
     ProjectData:
       type: object
       description: >

@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'No s’ha trobat res',
   expand: 'Desplega',
   collapse: 'Plega',
+  components: 'Components enllaçats',
+  newComponent: 'Component nou',
+  componentName: 'Component enllaçat',
+  saveAsComponent: 'Desa com a component',
+  promptComponentName: 'Nom del component',
+  editComponent: 'Edita el component',
+  detachComponent: 'Desvincula del component',
+  confirmRemoveComponent: 'Voleu suprimir el component «%s»? On s’utilitza, es mantindrà com a còpia normal.',
+  componentSaved: 'S’ha desat el component «%s»',
+  editingComponent: 'Component «%s»: els canvis s’apliquen a totes les pàgines',
+  backTo: '← Torna a «%s»',
 };
 
 export default messages;

@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Hiçbir şey bulunamadı',
   expand: 'Genişlet',
   collapse: 'Daralt',
+  components: 'Bileşenler',
+  newComponent: 'Yeni bileşen',
+  componentName: 'Bileşen',
+  saveAsComponent: 'Bileşen olarak kaydet',
+  promptComponentName: 'Bileşen adı',
+  editComponent: 'Bileşeni düzenle',
+  detachComponent: 'Bileşenden ayır',
+  confirmRemoveComponent: '“%s” bileşeni silinsin mi? Kullanıldığı yerlerde düz bir kopya olarak kalır.',
+  componentSaved: '“%s” bileşeni kaydedildi',
+  editingComponent: '“%s” bileşeni: değişiklikler her sayfada uygulanır',
+  backTo: '← “%s” sayfasına dön',
 };
 
 export default messages;

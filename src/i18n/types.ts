@@ -105,4 +105,23 @@ export interface PagesLabels {
   noMatches: string;
   expand: string;
   collapse: string;
+
+  /* ---- linked components ---- */
+  components: string;
+  newComponent: string;
+  /** Base of auto-generated names: "Component 1"… */
+  componentName: string;
+  saveAsComponent: string;
+  /** Prompt title when saving a selection as a component */
+  promptComponentName: string;
+  editComponent: string;
+  detachComponent: string;
+  /** %s — component name */
+  confirmRemoveComponent: string;
+  /** %s — component name */
+  componentSaved: string;
+  /** %s — component name; shown over the canvas while a component is edited */
+  editingComponent: string;
+  /** %s — page name */
+  backTo: string;
 }

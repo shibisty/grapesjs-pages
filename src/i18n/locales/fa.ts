@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'چیزی پیدا نشد',
   expand: 'باز کردن',
   collapse: 'بستن',
+  components: 'کامپوننت‌ها',
+  newComponent: 'کامپوننت جدید',
+  componentName: 'کامپوننت',
+  saveAsComponent: 'ذخیره به‌عنوان کامپوننت',
+  promptComponentName: 'نام کامپوننت',
+  editComponent: 'ویرایش کامپوننت',
+  detachComponent: 'جدا کردن از کامپوننت',
+  confirmRemoveComponent: 'کامپوننت «%s» حذف شود؟ هر جا استفاده شده باشد، به‌صورت یک رونوشت عادی باقی می‌ماند.',
+  componentSaved: 'کامپوننت «%s» ذخیره شد',
+  editingComponent: 'کامپوننت «%s»: تغییرات در همهٔ صفحه‌ها اعمال می‌شود',
+  backTo: '← بازگشت به «%s»',
 };
 
 export default messages;

@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Niets gevonden',
   expand: 'Uitvouwen',
   collapse: 'Samenvouwen',
+  components: 'Componenten',
+  newComponent: 'Nieuwe component',
+  componentName: 'Sitecomponent',
+  saveAsComponent: 'Opslaan als component',
+  promptComponentName: 'Componentnaam',
+  editComponent: 'Component bewerken',
+  detachComponent: 'Loskoppelen van component',
+  confirmRemoveComponent: 'Component ‘%s’ verwijderen? Waar die gebruikt wordt, blijft een gewone kopie staan.',
+  componentSaved: 'Component ‘%s’ opgeslagen',
+  editingComponent: 'Component ‘%s’: wijzigingen gelden op elke pagina',
+  backTo: '← Terug naar ‘%s’',
 };
 
 export default messages;

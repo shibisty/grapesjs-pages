@@ -66,6 +66,10 @@ export const CSS = `
 .gjsp-choices button{text-align:start}
 .gjsp-select{width:100%;box-sizing:border-box;padding:6px 8px;margin:4px 0 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:3px}
 .gjsp-toggle.gjsp-btn-inline{position:static;box-shadow:none;padding:5px;border:0;border-radius:0;background:transparent}
+.gjsp-component-bar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:6px 12px;border-radius:16px;background:var(--gjs-quaternary-color,#d278c9);color:#fff;font:12px/1.4 var(--gjs-main-font,Helvetica,sans-serif);box-shadow:0 1px 6px rgba(0,0,0,.3)}
+.gjsp-component-bar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-component-back{flex-shrink:0;border:0;border-radius:10px;padding:3px 9px;background:rgba(0,0,0,.25);color:inherit;font:inherit;cursor:pointer}
+.gjsp-component-back:hover{background:rgba(0,0,0,.4)}
 `;
 
 export function injectCss(doc: Document = document): void {

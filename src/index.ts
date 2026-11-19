@@ -29,3 +29,7 @@ export { pageTree, moveInTree, keyboardMove, searchTree, subtree } from './ui/tr
 export type { DropWhere, TreeMove, TreeRow } from './ui/tree';
 export { uuid } from './utils';
 export type * from './types';
+export { ComponentsFeature, BLOCK_CATEGORY, BLOCK_PREFIX, instanceOf } from './components/ComponentsFeature';
+export type { ComponentsApi } from './components/ComponentsFeature';
+export { expandProject, buildInstance, detachJson, INSTANCE_TYPE, INSTANCE_ATTR } from './components/expand';
+export type { Master } from './components/expand';

@@ -248,13 +248,40 @@ export class PagesManager {
     if (!rec || rec.deleted || !this.alive()) return;
     this.active = id;
     await this.store.setMeta(META.active, id);
-    const { str } = await this.load(rec.data || this.blank());
+    let data = rec.data || this.blank();
+    if (this.prepare) {
+      try {
+        data = await this.prepare(data, rec);
+      } catch (e) {
+        report(e); // a broken component must not keep the page from opening
+      }
+    }
+    if (this.active !== id || !this.alive()) return; // another open() won meanwhile
+    const { str } = await this.load(data);
     const hs = this.hist.get(id);
     if (hs) hs.replaceCurrent(str);
     else this.hist.set(id, new SnapshotHistory(str, this.opts.historyLimit));
     this.emitHistory();
     this.emitChange();
     this.emit(EVENTS.open, rec);
+  }
+
+  /**
+   * Hook run on the project data of a record right before it is loaded into
+   * the editor (linked components expand their instances here). The stored
+   * record is not changed.
+   */
+  private prepare: ((data: ProjectData, rec: PageRecord) => ProjectData | Promise<ProjectData>) | null = null;
+
+  setPrepare(fn: ((data: ProjectData, rec: PageRecord) => ProjectData | Promise<ProjectData>) | null): void {
+    this.prepare = fn;
+  }
+
+  /** Stores a new record without opening it. */
+  async add(rec: PageRecord): Promise<PageRecord> {
+    await this.store.put(rec);
+    this.emitChange();
+    return rec;
   }
 
   async create({ name, data, ...extra }: CreateInit = {}): Promise<PageRecord> {
@@ -310,7 +337,9 @@ export class PagesManager {
     if (wasActive) {
       this.active = null;
       const rest = await this.list();
-      if (rest.length) await this.open(rest[0].id, { force: true, skipFlush: true });
+      // Prefer a page over a layout, a template or a component.
+      const next = rest.find((r) => (r.kind || 'page') === 'page' && !r.templateId) || rest[0];
+      if (next) await this.open(next.id, { force: true, skipFlush: true });
       else await this.create();
     } else {
       this.emitChange();

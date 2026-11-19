@@ -2,6 +2,7 @@ import type { ProjectData } from 'grapesjs';
 import type { PagesLabels } from './i18n/types';
 import type { PageStore } from './store/types';
 import type { SyncService } from './sync/SyncService';
+import type { ComponentsApi } from './components/ComponentsFeature';
 
 export type { ProjectData };
 
@@ -17,8 +18,10 @@ export interface RemoteInfo {
  * - `layout`   the frame pages are put into (header, footer, a slot)
  * - `template` a design whose entries fill its fields (grapesjs-storage)
  * - `site`     the one site record: global styles and settings
+ * - `component` a reusable piece (header, footer, a form): pages hold linked
+ *              copies of it, refreshed from it whenever a page is opened
  */
-export type RecordKind = 'page' | 'layout' | 'template' | 'site';
+export type RecordKind = 'page' | 'layout' | 'template' | 'site' | 'component';
 
 export type PageStatus = 'draft' | 'published' | 'archived';
 
@@ -285,4 +288,7 @@ export interface PagesManagerApi {
    * pages changed (0: not possible, e.g. into its own subtree).
    */
   move(id: string, targetId: string, where: 'before' | 'inside' | 'after'): Promise<number>;
+
+  /** Linked components (both modes): list, save the selection as one, edit, detach, insert. */
+  components: ComponentsApi;
 }

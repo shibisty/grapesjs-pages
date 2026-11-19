@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Ništa nije pronađeno',
   expand: 'Proširi',
   collapse: 'Skupi',
+  components: 'Komponente',
+  newComponent: 'Nova komponenta',
+  componentName: 'Komponenta',
+  saveAsComponent: 'Sačuvaj kao komponentu',
+  promptComponentName: 'Naziv komponente',
+  editComponent: 'Uredi komponentu',
+  detachComponent: 'Odvoji od komponente',
+  confirmRemoveComponent: 'Obrisati komponentu „%s“? Tamo gdje se koristi, ostaje kao obična kopija.',
+  componentSaved: 'Komponenta „%s“ spremljena',
+  editingComponent: 'Komponenta „%s“: promjene se primjenjuju na svim stranicama',
+  backTo: '← Nazad na „%s“',
 };
 
 export default messages;

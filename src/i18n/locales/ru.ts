@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Ничего не найдено',
   expand: 'Развернуть',
   collapse: 'Свернуть',
+  components: 'Компоненты',
+  newComponent: 'Новый компонент',
+  componentName: 'Компонент',
+  saveAsComponent: 'Сохранить как компонент',
+  promptComponentName: 'Название компонента',
+  editComponent: 'Редактировать компонент',
+  detachComponent: 'Отвязать от компонента',
+  confirmRemoveComponent: 'Удалить компонент «%s»? Там, где он вставлен, останется обычная копия.',
+  componentSaved: 'Компонент «%s» сохранён',
+  editingComponent: 'Компонент «%s»: изменения появятся на всех страницах',
+  backTo: '← Назад к «%s»',
 };
 
 export default messages;

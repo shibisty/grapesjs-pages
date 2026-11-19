@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Nothing found',
   expand: 'Expand',
   collapse: 'Collapse',
+  components: 'Components',
+  newComponent: 'New component',
+  componentName: 'Component',
+  saveAsComponent: 'Save as component',
+  promptComponentName: 'Component name',
+  editComponent: 'Edit component',
+  detachComponent: 'Detach from component',
+  confirmRemoveComponent: 'Delete component “%s”? Where it is used, it stays as a plain copy.',
+  componentSaved: 'Component “%s” saved',
+  editingComponent: 'Component “%s”: changes apply on every page',
+  backTo: '← Back to “%s”',
 };
 
 export default messages;

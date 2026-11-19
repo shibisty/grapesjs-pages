@@ -87,6 +87,17 @@ const messages: PagesLabels = {
   noMatches: 'Δεν βρέθηκε τίποτα',
   expand: 'Ανάπτυξη',
   collapse: 'Σύμπτυξη',
+  components: 'Στοιχεία',
+  newComponent: 'Νέο στοιχείο',
+  componentName: 'Στοιχείο',
+  saveAsComponent: 'Αποθήκευση ως στοιχείο',
+  promptComponentName: 'Όνομα στοιχείου',
+  editComponent: 'Επεξεργασία στοιχείου',
+  detachComponent: 'Αποσύνδεση από το στοιχείο',
+  confirmRemoveComponent: 'Διαγραφή του στοιχείου «%s»; Όπου χρησιμοποιείται, θα παραμείνει ως απλό αντίγραφο.',
+  componentSaved: 'Το στοιχείο «%s» αποθηκεύτηκε',
+  editingComponent: 'Στοιχείο «%s»: οι αλλαγές εφαρμόζονται σε όλες τις σελίδες',
+  backTo: '← Επιστροφή στη «%s»',
 };
 
 export default messages;

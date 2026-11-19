@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: grapesjs-pages contract v2
-  version: 2.0.0
+  version: 2.1.0
   license:
     name: MIT
     identifier: MIT
@@ -14,7 +14,15 @@ info:
     Rules:
 
 
-    - **Records** are a site (one), layouts, templates and pages, keyed by UUIDs the editor generates.
+    - **Records** are a site (one), layouts, templates, pages and components, keyed by UUIDs the editor generates.
+
+    - **Components** (`/components`, since 2.1.0 of this contract; optional) are linked pieces of a site (a header,
+    a footer, a form). A page holds a copy of each component it uses: an element with `data-gjsp-component="<component
+    id>"` whose content the editor rebuilds from the component on every open, so a page''s published HTML already
+    contains the component as it was then. To show a changed component on pages published before, a server may
+    replace the content of every `[data-gjsp-component]` element with the component''s published HTML when it
+    renders or republishes. A server without `/components` answers `404`: the editor then keeps components in its
+    local cache only.
 
     - **Versions**: every record has a `version` that changes on every write (also the `ETag`). `If-Match: "7"`
     makes a write, delete, publish or restore conditional: `412` when the record moved on. A write without `If-Match`
@@ -459,7 +467,7 @@ components:
       - errors
     Record:
       type: object
-      description: A layout, template or page. Pages carry the page fields, templates `fields`.
+      description: A layout, template, page or component. Pages carry the page fields, templates `fields`.
       properties:
         kind:
           type: string
@@ -467,6 +475,7 @@ components:
           - layout
           - template
           - page
+          - component
         id:
           type: string
           format: uuid
@@ -743,6 +752,7 @@ components:
         - layouts
         - templates
         - pages
+        - components
     ID:
       name: id
       in: path

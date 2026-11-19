@@ -6,6 +6,7 @@ A GrapesJS plugin that turns the editor into a small multi-page site editor:
 - **Local storage** — every page is kept in IndexedDB (or any custom `PageStore`) and autosaved.
 - **Per-page undo/redo** — `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`) work on the history of the page you are on.
 - **Copy/paste between pages** — `Ctrl+C` / `Ctrl+V` copy whole components *with their styles* from one page to another.
+- **Linked components** — save a header, a footer or a form once and put it on any page from the *Components* blocks (or the context menu); edit it once and every page shows the change.
 - **Manual REST sync** — compare local pages with a server, review the plan (upload / download / delete / resolve conflicts) and apply it. The contract is in [`openapi.yaml`](./openapi.yaml).
 - **Remote mode (v2)** — the server is the source of truth and IndexedDB a cache and offline queue: layouts, templates and the site besides pages, a page tree with addresses and SEO, Publish and revisions. The contract is in [`openapi.v2.yaml`](./openapi.v2.yaml).
 - **23 languages** (the GrapesJS core locales + Ukrainian), RTL for ar/he/fa.
@@ -92,6 +93,40 @@ When [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-too
 
 There is no dependency on sidebar-tools: without it nothing changes. `workspaceTabs: false` turns the tabs off.
 
+## Linked components
+
+Parts that repeat across pages (a header, a footer, a sign-up form) are
+*components*: records of their own, listed in the sidebar's **Components**
+section, offered as blocks in the **Components** category of the Block
+Manager — so they can be dragged onto any page, and with
+[grapesjs-context-menu](https://www.npmjs.com/package/grapesjs-context-menu)
+1.2+ they are also in its *Add element ▸ Components* submenu.
+
+- **Make one**: right-click an element ▸ *Save as component* (or the command
+  `pages-manager:component-save`, or `components.save()`), or `+` in the
+  Components section for an empty one. The element is replaced by a linked
+  copy; its styles go with it.
+- **Linked copies** (instances) are read-only on the page: a click selects the
+  whole copy, which can be moved, duplicated, deleted and given its own outer
+  styles, but not edited inside.
+- **Edit**: double-click a copy, its toolbar's pencil or *Edit component* in
+  the context menu opens the component itself; a bar over the canvas says
+  so and leads back to the page. Every page shows the change the next time it
+  is opened.
+- **Detach**: *Detach from component* turns a copy into ordinary, editable
+  elements that no longer follow the component.
+- **Delete** a component: where it was used it stays as a plain copy.
+
+How it works: a copy is an element `<div data-gjsp-component="<id>">`. Each
+time a page is opened its copies are rebuilt from their components (ids are
+made unique per copy — `x` becomes `x-<copy id>` — and so are the `#id` rules;
+a component's class rules replace page rules with the same selector). The
+saved page and its published HTML contain the copies as they were then; in
+remote mode a server can swap in the component's latest published HTML (see
+`openapi.v2.yaml`). Components are synced like pages: v1 sends `kind:
+"component"`, remote mode uses `/components` (a server without it answers
+`404` and the components stay in the local cache).
+
 ## Remote mode (contract v2)
 
 ```js
@@ -176,6 +211,14 @@ refresh()                                 // read the server's lists now
 resolve(id, 'local' | 'remote' | 'both')
 importLocal(): Promise<number>
 move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what drag and drop does
+
+// linked components (both modes)
+components.list(): Master[]                         // { id, name, components, styles }
+components.save(component = selected, name?)        // without a name: window.prompt
+components.edit(instanceOrId = selected)
+components.detach(instance = selected): Component | null
+components.insert(id, target?, at?): Component | null
+components.isInstance(component): boolean
 ```
 
 ### Events
@@ -193,13 +236,17 @@ move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what dra
 | `publish` | `pages-manager:published` | `{ record, revision, warnings }` (remote) |
 | `conflict` | `pages-manager:conflict` | `PageRecord` (remote) |
 | `remote` | `pages-manager:remote` | `'idle' \| 'saving' \| 'offline' \| 'error'` (remote) |
+| `components` | `pages-manager:components` | `Master[]` — the list of components changed |
 
 ### Commands
 
 `pages-manager:open`, `pages-manager:toggle`, `pages-manager:copy`,
 `pages-manager:paste`, `pages-manager:sync`, `pages-manager:settings`; remote mode:
 `pages-manager:publish`, `pages-manager:refresh`, `pages-manager:revisions` and
-`pages-manager:properties` (both take `{ id }`, default the open record).
+`pages-manager:properties` (both take `{ id }`, default the open record);
+components: `pages-manager:component-save` (`{ component?, name? }`),
+`pages-manager:component-edit` and `pages-manager:component-detach`
+(`{ component? }`, default the selection).
 `core:undo` / `core:redo` are redefined to use the per-page history, so the
 undo/redo buttons of presets keep working.
 

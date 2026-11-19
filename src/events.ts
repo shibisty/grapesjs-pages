@@ -24,6 +24,8 @@ export const EVENTS = {
   conflict: 'pages-manager:conflict',
   /** Remote mode: the connection state changed. Payload: `'idle' | 'saving' | 'offline' | 'error'`. */
   remote: 'pages-manager:remote',
+  /** The list of components changed. Payload: `Master[]`. */
+  components: 'pages-manager:components',
 } as const;
 
 /** Command ids registered by the plugin. */
@@ -38,4 +40,10 @@ export const COMMANDS = {
   revisions: 'pages-manager:revisions',
   properties: 'pages-manager:properties',
   refresh: 'pages-manager:refresh',
+  /** Saves the selected component as a linked component (`{ component?, name? }`). */
+  saveComponent: 'pages-manager:component-save',
+  /** Opens the component of the selected instance (`{ component? }`). */
+  editComponent: 'pages-manager:component-edit',
+  /** Turns the selected instance into a plain copy (`{ component? }`). */
+  detachComponent: 'pages-manager:component-detach',
 } as const;
