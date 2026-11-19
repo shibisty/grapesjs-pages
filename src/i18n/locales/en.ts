@@ -91,8 +91,8 @@ const messages: PagesLabels = {
   /* ---- site archive ---- */
   exportArchive: 'Export the site (ZIP)',
   importArchive: 'Import a site archive',
-  exportHint: 'Pages, layouts, templates with their fields, and the site’s styles and settings. Entries and field values are not included.',
-  exportHintLocal: 'The pages of this browser as a ZIP.',
+  exportHint: 'Pages, layouts, templates with their fields, linked components, and the site’s styles and settings. Entries and field values are not included.',
+  exportHintLocal: 'The pages and linked components of this browser as a ZIP.',
   exportHtml: 'Add the HTML and CSS of every record (each one is opened once)',
   download: 'Download',
   exporting: 'Exporting… %s',
@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Skipped: %s.',
   importErrors: 'Failed: %s',
   badArchive: 'Not a site archive: %s',
+
+  /* ---- linked components ---- */
+  components: 'Components',
+  newComponent: 'New component',
+  componentName: 'Component',
+  saveAsComponent: 'Save as component',
+  promptComponentName: 'Component name',
+  editComponent: 'Edit component',
+  detachComponent: 'Detach from component',
+  confirmRemoveComponent: 'Delete component “%s”? Where it is used, it stays as a plain copy.',
+  componentSaved: 'Component “%s” saved',
+  editingComponent: 'Component “%s”: changes apply on every page',
+  backTo: '← Back to “%s”',
 };
 
 export default messages;

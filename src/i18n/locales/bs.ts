@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Preskočeno: %s.',
   importErrors: 'Nije uspjelo: %s',
   badArchive: 'Nije arhiva stranice: %s',
+
+  /* ---- linked components ---- */
+  components: 'Komponente',
+  newComponent: 'Nova komponenta',
+  componentName: 'Komponenta',
+  saveAsComponent: 'Sačuvaj kao komponentu',
+  promptComponentName: 'Naziv komponente',
+  editComponent: 'Uredi komponentu',
+  detachComponent: 'Odvoji od komponente',
+  confirmRemoveComponent: 'Obrisati komponentu „%s“? Tamo gdje se koristi, ostaje kao obična kopija.',
+  componentSaved: 'Komponenta „%s“ spremljena',
+  editingComponent: 'Komponenta „%s“: promjene se primjenjuju na svim stranicama',
+  backTo: '← Nazad na „%s“',
 };
 
 export default messages;

@@ -3,6 +3,7 @@ import type { PagesLabels } from './i18n/types';
 import type { PageStore } from './store/types';
 import type { SyncService } from './sync/SyncService';
 import type { ExportOptions, ImportOptions, ImportReport } from './archive/ArchiveService';
+import type { ComponentsApi } from './components/ComponentsFeature';
 
 export type { ProjectData };
 
@@ -18,8 +19,10 @@ export interface RemoteInfo {
  * - `layout`   the frame pages are put into (header, footer, a slot)
  * - `template` a design whose entries fill its fields (grapesjs-storage)
  * - `site`     the one site record: global styles and settings
+ * - `component` a reusable piece (header, footer, a form): pages hold linked
+ *              copies of it, refreshed from it whenever a page is opened
  */
-export type RecordKind = 'page' | 'layout' | 'template' | 'site';
+export type RecordKind = 'page' | 'layout' | 'template' | 'site' | 'component';
 
 export type PageStatus = 'draft' | 'published' | 'archived';
 
@@ -306,4 +309,6 @@ export interface PagesManagerApi {
   downloadArchive(opts?: ExportOptions): Promise<void>;
   /** Writes an archive's records here (see `ImportOptions`). */
   importArchive(file: Blob | ArrayBuffer | Uint8Array, opts?: ImportOptions): Promise<ImportReport>;
+  /** Linked components (both modes): list, save the selection as one, edit, detach, insert. */
+  components: ComponentsApi;
 }

@@ -110,6 +110,19 @@ const messages: PagesLabels = {
   importSkipped: 'Överhoppade: %s.',
   importErrors: 'Misslyckades: %s',
   badArchive: 'Inte ett webbplatsarkiv: %s',
+
+  /* ---- linked components ---- */
+  components: 'Komponenter',
+  newComponent: 'Ny komponent',
+  componentName: 'Komponent',
+  saveAsComponent: 'Spara som komponent',
+  promptComponentName: 'Komponentnamn',
+  editComponent: 'Redigera komponent',
+  detachComponent: 'Koppla loss från komponenten',
+  confirmRemoveComponent: 'Ta bort komponenten ”%s”? Där den används blir den kvar som en vanlig kopia.',
+  componentSaved: 'Komponenten ”%s” har sparats',
+  editingComponent: 'Komponent ”%s”: ändringarna gäller på alla sidor',
+  backTo: '← Tillbaka till ”%s”',
 };
 
 export default messages;

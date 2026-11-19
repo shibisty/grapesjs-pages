@@ -1,7 +1,7 @@
 import type { ProjectData } from '../../src/types';
 
-type Coll = 'pages' | 'layouts' | 'templates';
-const KIND: Record<Coll, string> = { pages: 'page', layouts: 'layout', templates: 'template' };
+type Coll = 'pages' | 'layouts' | 'templates' | 'components';
+const KIND: Record<Coll, string> = { pages: 'page', layouts: 'layout', templates: 'template', components: 'component' };
 
 export interface V2Record {
   kind: string;
@@ -46,7 +46,9 @@ const slugify = (s: string) =>
  * deletes), layouts need a slot to publish.
  */
 export class FakeServerV2 {
-  readonly colls: Record<Coll, Map<string, V2Record>> = { pages: new Map(), layouts: new Map(), templates: new Map() };
+  readonly colls: Record<Coll, Map<string, V2Record>> = { pages: new Map(), layouts: new Map(), templates: new Map(), components: new Map() };
+  /** Behave like a server from before /components (404). */
+  noComponents = false;
   site = { name: '', settings: {} as Record<string, unknown>, version: 1, data: null as ProjectData | null, updated_at: now(), revisions: [] as V2Record['revisions'] };
   calls: V2Call[] = [];
   /** Every request fails like a dead network while set. */
@@ -137,9 +139,10 @@ export class FakeServerV2 {
       return json(200, { items: [...this.site.revisions].reverse().map((r, i) => ({ revision: r.revision, created_at: r.created_at, created_by: 'key:test', live: i === 0 })) });
     }
 
-    const m = path.match(/^\/(pages|layouts|templates)(?:\/([^/]+))?(?:\/(publish|unpublish|revisions)(?:\/(\d+)\/restore)?)?$/);
+    const m = path.match(/^\/(pages|layouts|templates|components)(?:\/([^/]+))?(?:\/(publish|unpublish|revisions)(?:\/(\d+)\/restore)?)?$/);
     if (!m) return json(404, { error: 'Not found.' });
     const coll = m[1] as Coll;
+    if (coll === 'components' && this.noComponents) return json(404, { error: 'Not found.' });
     const id = m[2] ? decodeURIComponent(m[2]) : undefined;
     const action = m[3];
     const map = this.colls[coll];

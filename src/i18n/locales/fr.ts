@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Ignorés : %s.',
   importErrors: 'Échec : %s',
   badArchive: 'Ce n’est pas une archive de site : %s',
+
+  /* ---- linked components ---- */
+  components: 'Composants',
+  newComponent: 'Nouveau composant',
+  componentName: 'Composant',
+  saveAsComponent: 'Enregistrer comme composant',
+  promptComponentName: 'Nom du composant',
+  editComponent: 'Modifier le composant',
+  detachComponent: 'Détacher du composant',
+  confirmRemoveComponent: 'Supprimer le composant « %s » ? Là où il est utilisé, il restera une simple copie.',
+  componentSaved: 'Composant « %s » enregistré',
+  editingComponent: 'Composant « %s » : les modifications s’appliquent à toutes les pages',
+  backTo: '← Retour à « %s »',
 };
 
 export default messages;

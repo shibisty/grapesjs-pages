@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Pominięto: %s.',
   importErrors: 'Nie powiodło się: %s',
   badArchive: 'To nie jest archiwum witryny: %s',
+
+  /* ---- linked components ---- */
+  components: 'Komponenty',
+  newComponent: 'Nowy komponent',
+  componentName: 'Komponent',
+  saveAsComponent: 'Zapisz jako komponent',
+  promptComponentName: 'Nazwa komponentu',
+  editComponent: 'Edytuj komponent',
+  detachComponent: 'Odłącz od komponentu',
+  confirmRemoveComponent: 'Usunąć komponent „%s”? Tam, gdzie jest używany, pozostanie zwykła kopia.',
+  componentSaved: 'Zapisano komponent „%s”',
+  editingComponent: 'Komponent „%s”: zmiany obowiązują na każdej stronie',
+  backTo: '← Wróć do „%s”',
 };
 
 export default messages;

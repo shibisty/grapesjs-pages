@@ -145,7 +145,9 @@ export class SyncService {
   async pull(id: string, { asNew = false } = {}): Promise<void> {
     const p = await this.client.getPage(id);
     if (asNew) {
-      await this.store.put(this.manager.newRecord(`${p.name} (${this.t('serverSuffix')})`, p.data));
+      await this.store.put(
+        this.manager.newRecord(`${p.name} (${this.t('serverSuffix')})`, p.data, p.kind === 'component' ? { kind: 'component' } : {})
+      );
       return;
     }
     const cur = await this.store.get(id);
@@ -161,6 +163,8 @@ export class SyncService {
       deleted: false,
       remote: { version: p.version, updatedAt: p.updatedAt },
     };
+    // A server that does not keep `kind` must not turn a component into a page.
+    if (p.kind === 'component' || cur?.kind === 'component') rec.kind = 'component';
     await this.manager.replaceRecord(rec);
   }
 }

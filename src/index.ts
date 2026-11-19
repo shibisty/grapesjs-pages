@@ -48,3 +48,7 @@ export {
 } from './archive/format';
 export type { ArchiveRecord, ArchiveManifest, ManifestEntry, ReadArchive } from './archive/format';
 export { canvasMarkup } from './remote/RemoteEditor';
+export { ComponentsFeature, BLOCK_CATEGORY, BLOCK_PREFIX, instanceOf } from './components/ComponentsFeature';
+export type { ComponentsApi } from './components/ComponentsFeature';
+export { expandProject, buildInstance, detachJson, INSTANCE_TYPE, INSTANCE_ATTR } from './components/expand';
+export type { Master } from './components/expand';

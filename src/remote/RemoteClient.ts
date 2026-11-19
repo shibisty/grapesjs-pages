@@ -51,6 +51,7 @@ export const COLLECTION: Record<Exclude<RecordKind, 'site'>, string> = {
   page: 'pages',
   layout: 'layouts',
   template: 'templates',
+  component: 'components',
 };
 
 /** Local id of the site record (the server has one site per application). */

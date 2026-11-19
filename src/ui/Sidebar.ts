@@ -419,8 +419,15 @@ export class Sidebar {
     const rows = await this.manager.list();
     if (this.remote) this.renderRemote(rows);
     else {
-      const shown = rows.filter((r) => matches(r, this.query));
-      this.list.replaceChildren(...(shown.length || !rows.length ? shown.map((r) => this.row(r)) : [this.nothing()]));
+      // Pages, then the linked components (local mode has no other kinds).
+      const pages = rows.filter((r) => r.kind !== 'component');
+      const comps = rows.filter((r) => r.kind === 'component');
+      const shown = pages.filter((r) => matches(r, this.query));
+      const shownComps = comps.filter((r) => matches(r, this.query));
+      const items: HTMLLIElement[] = shown.map((r) => this.row(r));
+      if (!this.query || shownComps.length) items.push(this.sectionHead(this.t('components'), 'component', this.t('newComponent')), ...shownComps.map((r) => this.row(r)));
+      if (this.query && !shown.length && !shownComps.length && rows.length) items.push(this.nothing());
+      this.list.replaceChildren(...items);
     }
     this.renderStatus();
     this.updateHistory();
@@ -431,15 +438,7 @@ export class Sidebar {
     const t = this.t;
     const a = this.actions;
     const of = (k: RecordKind) => rows.filter((r) => (r.kind || 'page') === k);
-    const head = (label: string, kind: RecordKind | null, add: string) =>
-      h(
-        'li',
-        { class: 'gjsp-section', role: 'presentation', 'data-section': kind || 'site' },
-        h('span', {}, label),
-        kind && a.createKind
-          ? h('button', { class: 'gjsp-act', type: 'button', title: add, 'aria-label': add, 'data-create': kind, onclick: () => a.createKind!(kind) }, '+')
-          : null
-      );
+    const head = (label: string, kind: RecordKind | null, add: string) => this.sectionHead(label, kind, add);
     // Entries (pages of a template) belong to grapesjs-storage's views.
     const pages = of('page').filter((r) => !r.templateId);
     // A search shows the matches with their ancestors, everything expanded.
@@ -455,8 +454,10 @@ export class Sidebar {
     const items: HTMLLIElement[] = [head(t('pages'), 'page', t('newPage')), ...pageRows];
     items.push(head(t('layouts'), 'layout', t('newLayout')), ...plain('layout').map((r) => this.row(r)));
     items.push(head(t('templates'), 'template', t('newTemplate')), ...plain('template').map((r) => this.row(r)));
+    items.push(head(t('components'), 'component', t('newComponent')), ...plain('component').map((r) => this.row(r)));
     if (of('site').length && (!this.query || site.length)) items.push(head(t('site'), null, ''), ...site.map((r) => this.row({ ...r, name: t('site') })));
-    if (this.query && !pageRows.length && !plain('layout').length && !plain('template').length && !site.length) items.push(this.nothing());
+    if (this.query && !pageRows.length && !plain('layout').length && !plain('template').length && !plain('component').length && !site.length)
+      items.push(this.nothing());
     if (this.localCount && a.importLocal) {
       items.push(
         h(
@@ -470,6 +471,19 @@ export class Sidebar {
     const active = rows.find((r) => r.id === this.manager.activeId);
     this.btn.publish.disabled = !active || !!active.conflict;
     this.btn.revisions.disabled = !active;
+  }
+
+  /** A section title with an optional "+" (new record of that kind). */
+  private sectionHead(label: string, kind: RecordKind | null, add: string): HTMLLIElement {
+    const a = this.actions;
+    return h(
+      'li',
+      { class: 'gjsp-section', role: 'presentation', 'data-section': kind || 'site' },
+      h('span', {}, label),
+      kind && a.createKind
+        ? h('button', { class: 'gjsp-act', type: 'button', title: add, 'aria-label': add, 'data-create': kind, onclick: () => a.createKind!(kind) }, '+')
+        : null
+    );
   }
 
   private nothing(): HTMLLIElement {

@@ -91,8 +91,8 @@ const messages: PagesLabels = {
   /* ---- site archive ---- */
   exportArchive: 'Експорт сайту (ZIP)',
   importArchive: 'Імпорт архіву сайту',
-  exportHint: 'Сторінки, макети, шаблони з їхніми полями, стилі та налаштування сайту. Записи й значення полів не входять.',
-  exportHintLocal: 'Сторінки цього браузера в ZIP.',
+  exportHint: 'Сторінки, макети, шаблони з їхніми полями, пов’язані компоненти, стилі та налаштування сайту. Записи й значення полів не входять.',
+  exportHintLocal: 'Сторінки та пов’язані компоненти цього браузера в ZIP.',
   exportHtml: 'Додати HTML і CSS кожного запису (кожен відкриється один раз)',
   download: 'Завантажити',
   exporting: 'Експорт… %s',
@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Пропущено: %s.',
   importErrors: 'Не вдалося: %s',
   badArchive: 'Це не архів сайту: %s',
+
+  /* ---- linked components ---- */
+  components: 'Компоненти',
+  newComponent: 'Новий компонент',
+  componentName: 'Компонент',
+  saveAsComponent: 'Зберегти як компонент',
+  promptComponentName: 'Назва компонента',
+  editComponent: 'Редагувати компонент',
+  detachComponent: 'Відв’язати від компонента',
+  confirmRemoveComponent: 'Видалити компонент «%s»? Там, де його вставлено, залишиться звичайна копія.',
+  componentSaved: 'Компонент «%s» збережено',
+  editingComponent: 'Компонент «%s»: зміни з’являться на всіх сторінках',
+  backTo: '← Назад до «%s»',
 };
 
 export default messages;

@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'דולגו: %s.',
   importErrors: 'נכשלו: %s',
   badArchive: 'זה אינו ארכיון אתר: %s',
+
+  /* ---- linked components ---- */
+  components: 'רכיבים',
+  newComponent: 'רכיב חדש',
+  componentName: 'רכיב',
+  saveAsComponent: 'שמירה כרכיב',
+  promptComponentName: 'שם הרכיב',
+  editComponent: 'עריכת הרכיב',
+  detachComponent: 'ניתוק מהרכיב',
+  confirmRemoveComponent: 'למחוק את הרכיב "%s"? במקומות שבהם הוא בשימוש הוא יישאר כעותק רגיל.',
+  componentSaved: 'הרכיב "%s" נשמר',
+  editingComponent: 'רכיב "%s": השינויים יחולו בכל הדפים',
+  backTo: '← חזרה אל "%s"',
 };
 
 export default messages;

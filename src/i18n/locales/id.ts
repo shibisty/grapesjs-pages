@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Dilewati: %s.',
   importErrors: 'Gagal: %s',
   badArchive: 'Bukan arsip situs: %s',
+
+  /* ---- linked components ---- */
+  components: 'Komponen',
+  newComponent: 'Komponen baru',
+  componentName: 'Komponen',
+  saveAsComponent: 'Simpan sebagai komponen',
+  promptComponentName: 'Nama komponen',
+  editComponent: 'Sunting komponen',
+  detachComponent: 'Lepaskan dari komponen',
+  confirmRemoveComponent: 'Hapus komponen “%s”? Di tempat komponen ini digunakan, isinya tetap ada sebagai salinan biasa.',
+  componentSaved: 'Komponen “%s” tersimpan',
+  editingComponent: 'Komponen “%s”: perubahan berlaku di semua halaman',
+  backTo: '← Kembali ke “%s”',
 };
 
 export default messages;

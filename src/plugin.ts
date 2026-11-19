@@ -23,6 +23,7 @@ import { injectCss } from './ui/styles';
 import { connectWorkspace } from './integration/workspace';
 import { ArchiveService, type ExportOptions, type ImportOptions, type ImportReport } from './archive/ArchiveService';
 import { openExportModal, openImportModal, type ArchiveActions } from './ui/archiveModals';
+import { ComponentsFeature } from './components/ComponentsFeature';
 
 export const PANEL_BUTTON_ID = 'pages-manager';
 
@@ -102,6 +103,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     else await manager.create();
   };
   const clipboard = new ComponentClipboard(editor, store, () => manager.activeId);
+  // Linked components: blocks, read-only instances rebuilt on every open.
+  const components = new ComponentsFeature(editor, manager, t, (text) => sidebar?.flash(text));
   // With grapesjs-sidebar-tools 2.2+: every opened page is a tab of its workspace.
   const disconnectWorkspace = opts.workspaceTabs ? connectWorkspace(editor, manager) : () => undefined;
   const sync = new SyncService(editor, manager, store, opts, t);
@@ -131,7 +134,8 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     if (confirm) {
       const rec = await store.get(id);
       if (!rec || rec.deleted) return;
-      if (!window.confirm(fmt(t('confirmRemove'), rec.name))) return;
+      const msg = rec.kind === 'component' ? t('confirmRemoveComponent') : t('confirmRemove');
+      if (!window.confirm(fmt(msg, rec.name))) return;
     }
     await manager.remove(id);
   };
@@ -177,9 +181,10 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     return changes.length;
   };
 
-  /** A new page, layout or template, named "<Kind> <n>". */
+  /** A new page, layout, template or component, named "<Kind> <n>". */
   const createKind = async (kind: RecordKind): Promise<PageRecord> => {
-    const base = kind === 'layout' ? t('layout') : kind === 'template' ? t('newTemplate') : t('defaultName');
+    const base =
+      kind === 'layout' ? t('layout') : kind === 'template' ? t('newTemplate') : kind === 'component' ? t('componentName') : t('defaultName');
     const taken = new Set((await manager.list()).map((r) => r.name));
     let n = (await manager.list()).filter((r) => (r.kind || 'page') === kind).length + 1;
     while (taken.has(`${base} ${n}`)) n++;
@@ -278,6 +283,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     exportArchive: (o) => exportArchive(o),
     downloadArchive: (o) => downloadArchive(o),
     importArchive: (f, o) => importArchive(f, o),
+    components,
   };
   ed.PagesManager = api;
 
@@ -398,6 +404,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     if (disposed) return;
     disposed = true;
     disconnectWorkspace();
+    components.destroy();
     manager.destroy();
     rstore?.close();
     if (refreshTimer) clearInterval(refreshTimer);
@@ -533,6 +540,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       const every = opts.remote?.refreshInterval ?? 30_000;
       if (every > 0) refreshTimer = setInterval(onOnline, every);
     }
+    await components.reload();
     await manager.start();
     await sidebar?.render();
     if (remote) sidebar?.setLocalCount((await remote.localPages()).length);

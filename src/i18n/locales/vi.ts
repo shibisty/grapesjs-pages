@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Bỏ qua: %s.',
   importErrors: 'Thất bại: %s',
   badArchive: 'Không phải kho lưu trữ trang web: %s',
+
+  /* ---- linked components ---- */
+  components: 'Các thành phần',
+  newComponent: 'Thành phần mới',
+  componentName: 'Thành phần',
+  saveAsComponent: 'Lưu dưới dạng thành phần',
+  promptComponentName: 'Tên thành phần',
+  editComponent: 'Chỉnh sửa thành phần',
+  detachComponent: 'Tách khỏi thành phần',
+  confirmRemoveComponent: 'Xóa thành phần “%s”? Ở những nơi đang dùng, nó sẽ được giữ lại dưới dạng bản sao thông thường.',
+  componentSaved: 'Đã lưu thành phần “%s”',
+  editingComponent: 'Thành phần “%s”: thay đổi sẽ áp dụng trên mọi trang',
+  backTo: '← Quay lại “%s”',
 };
 
 export default messages;

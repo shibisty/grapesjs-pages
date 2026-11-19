@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: '已跳过：%s。',
   importErrors: '失败：%s',
   badArchive: '不是站点归档：%s',
+
+  /* ---- linked components ---- */
+  components: '组件',
+  newComponent: '新建组件',
+  componentName: '组件',
+  saveAsComponent: '另存为组件',
+  promptComponentName: '组件名称',
+  editComponent: '编辑组件',
+  detachComponent: '解除与组件的关联',
+  confirmRemoveComponent: '删除组件“%s”？在使用它的地方，它将保留为普通副本。',
+  componentSaved: '组件“%s”已保存',
+  editingComponent: '组件“%s”：更改将应用于所有页面',
+  backTo: '← 返回“%s”',
 };
 
 export default messages;

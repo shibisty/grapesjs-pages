@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: '건너뜀: %s.',
   importErrors: '실패: %s',
   badArchive: '사이트 아카이브가 아닙니다: %s',
+
+  /* ---- linked components ---- */
+  components: '컴포넌트',
+  newComponent: '새 컴포넌트',
+  componentName: '컴포넌트',
+  saveAsComponent: '컴포넌트로 저장',
+  promptComponentName: '컴포넌트 이름',
+  editComponent: '컴포넌트 편집',
+  detachComponent: '컴포넌트에서 분리',
+  confirmRemoveComponent: '‘%s’ 컴포넌트를 삭제할까요? 사용된 곳에는 일반 사본으로 남습니다.',
+  componentSaved: '‘%s’ 컴포넌트가 저장됨',
+  editingComponent: '‘%s’ 컴포넌트: 변경 사항이 모든 페이지에 적용됩니다',
+  backTo: '← ‘%s’(으)로 돌아가기',
 };
 
 export default messages;

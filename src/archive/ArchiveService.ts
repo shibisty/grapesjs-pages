@@ -67,8 +67,9 @@ const exportable = (r: PageRecord): boolean => !r.deleted && !(kindOf(r) === 'pa
 
 /**
  * Export and import of the whole site as a ZIP (`format.ts`). Works in
- * both modes: in local mode the archive holds the pages; in remote mode
- * also the layouts, templates (with their field lists) and the site.
+ * both modes: in local mode the archive holds the pages and the linked
+ * components; in remote mode also the layouts, templates (with their field
+ * lists) and the site.
  */
 export class ArchiveService {
   constructor(
@@ -152,7 +153,7 @@ export class ArchiveService {
     const usedIds = new Set(all.map((r) => r.id));
 
     let records = arc.records.filter((r) => {
-      const ok = this.remote ? r.kind !== 'site' || withSite : r.kind === 'page';
+      const ok = this.remote ? r.kind !== 'site' || withSite : r.kind === 'page' || r.kind === 'component';
       if (!ok) report_.skipped++;
       return ok;
     });
@@ -239,6 +240,9 @@ export class ArchiveService {
     if (this.remote) {
       rec.kind = a.kind;
       rec.dirtyMeta = true;
+    } else if (a.kind !== 'page') {
+      // Local mode keeps v1 pages without a kind; a linked component needs it.
+      rec.kind = a.kind;
     }
     if (a.kind === 'page' && this.remote) {
       rec.slug = freeSlug(a.slug || '/' + (a.name || 'page'), cur);

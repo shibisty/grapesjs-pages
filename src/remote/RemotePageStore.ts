@@ -23,7 +23,7 @@ export interface RemoteStoreOptions {
   retryDelay?: number;
 }
 
-const KINDS: Array<Exclude<RecordKind, 'site'>> = ['page', 'layout', 'template'];
+const KINDS: Array<Exclude<RecordKind, 'site'>> = ['page', 'layout', 'template', 'component'];
 
 const kindOf = (r: PageRecord): RecordKind => r.kind || 'page';
 
@@ -54,6 +54,8 @@ export class RemotePageStore implements PageStore {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private delay: number;
   private closed = false;
+  /** The server answered 404 on /components (an older contract v2 server). */
+  componentsUnsupported = false;
 
   constructor(
     readonly cache: PageStore,
@@ -191,6 +193,8 @@ export class RemotePageStore implements PageStore {
     const rec = await this.cache.get(id);
     if (!rec || rec.conflict) return;
     const kind = kindOf(rec);
+    // The server has no /components yet: the component is kept in the local cache only.
+    if (kind === 'component' && this.componentsUnsupported) return;
     if (rec.deleted) {
       if (rec.remote) {
         try {
@@ -264,7 +268,24 @@ export class RemotePageStore implements PageStore {
    */
   async refresh(): Promise<void> {
     const [lists, site] = await Promise.all([
-      Promise.all(KINDS.map((k) => this.client.list(k))),
+      Promise.all(
+        KINDS.map((k) =>
+          this.client.list(k).then(
+            (l) => {
+              if (k === 'component') this.componentsUnsupported = false;
+              return l;
+            },
+            (e) => {
+              // A server of contract v2 before /components: components stay local.
+              if (k === 'component' && e instanceof HttpError && (e.status === 404 || e.status === 405)) {
+                this.componentsUnsupported = true;
+                return [] as WireRecord[];
+              }
+              throw e;
+            }
+          )
+        )
+      ),
       this.client.get('site', SITE_ID),
     ]);
     const seen = new Set<string>();
@@ -296,6 +317,7 @@ export class RemotePageStore implements PageStore {
     await sync('site', site);
     for (const local of await this.cache.all()) {
       if (seen.has(local.id)) continue;
+      if (this.componentsUnsupported && kindOf(local) === 'component') continue;
       if (!local.remote) {
         if (!local.deleted) this.pending.add(local.id); // made offline
         continue;

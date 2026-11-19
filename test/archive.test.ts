@@ -128,6 +128,14 @@ describe('archive format', () => {
     expect(order.indexOf(ID(5))).toBeLessThan(order.indexOf(ID(4)));
   });
 
+  it('puts linked components in components/ and imports them right after the site', () => {
+    const withComp: ArchiveRecord[] = [...recs, { id: ID(9), kind: 'component', name: 'Site footer', data: project('<footer>F</footer>'), html: '<footer>F</footer>', css: '' }];
+    expect(recordDirs(withComp).get(ID(9))).toBe('components/site-footer');
+    const back = readArchiveFiles(archiveFiles(withComp));
+    expect(back.records.find((r) => r.id === ID(9))).toMatchObject({ kind: 'component', name: 'Site footer' });
+    expect(importOrder(withComp).map((r) => r.id).slice(0, 2)).toEqual(['site', ID(9)]);
+  });
+
   it('composes a page into its layout', () => {
     expect(compose('<main><page-slot></page-slot></main>', '<p>x</p>')).toBe('<main><p>x</p></main>');
     expect(compose('<main><div data-page-slot="">old</div></main>', '<p>x</p>')).toBe('<main><p>x</p></main>');
@@ -183,6 +191,34 @@ describe('local mode', () => {
     const r3 = await t.api.importArchive(bytes, { mode: 'copy' });
     expect(r3).toMatchObject({ created: 2, updated: 0 });
     expect((await t.api.list())).toHaveLength(5);
+  });
+
+  it('carries linked components: the instance on the page is rebuilt after the import', async () => {
+    const s = await createEditor({
+      html: '<main><h1>Home</h1></main><footer id="ft" class="site-footer"><p>Copyright</p></footer>',
+      css: '#ft{color:red}.site-footer{padding:10px}',
+    });
+    editor = s.editor;
+    const comp = (await s.api.components.save(s.editor.getWrapper()!.find('#ft')[0], 'Footer'))!;
+    await s.api.flush();
+    const files = unzip(await s.api.exportArchive());
+    const m = JSON.parse(files['manifest.json']);
+    expect(m.records.find((r: any) => r.id === comp.id)).toMatchObject({ kind: 'component', dir: 'components/footer' });
+
+    const t = await createEditor({ html: '<p>other</p>', css: '', plugin: { store: new MemoryPageStore(), dbName: 'other-c' } });
+    editor2 = t.editor;
+    const bytes = await s.api.exportArchive();
+    const r = await t.api.importArchive(bytes);
+    expect(r.errors).toEqual([]);
+    expect(r.created).toBe(2); // the page and the component
+    const imported = (await t.api.list()).find((p) => p.kind === 'component');
+    expect(imported).toMatchObject({ id: comp.id, name: 'Footer' });
+    await until(() => t.api.components.list().some((c) => c.id === comp.id));
+    const home = (await t.api.list()).find((p) => p.kind !== 'component' && p.name === 'Page 1' && p.id !== t.api.getActiveId())!;
+    await t.api.open(home.id, { force: true });
+    await tick(30);
+    expect(t.editor.getHtml()).toContain('Copyright');
+    expect(t.editor.getWrapper()!.find('[data-gjsp-component]')).toHaveLength(1);
   });
 
   it('brings back a page whose HTML and CSS were edited elsewhere', async () => {

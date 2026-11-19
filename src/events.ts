@@ -28,6 +28,8 @@ export const EVENTS = {
   exported: 'pages-manager:exported',
   /** A site archive was imported. Payload: the `ImportReport`. */
   imported: 'pages-manager:imported',
+  /** The list of components changed. Payload: `Master[]`. */
+  components: 'pages-manager:components',
 } as const;
 
 /** Command ids registered by the plugin. */
@@ -46,4 +48,10 @@ export const COMMANDS = {
   exportArchive: 'pages-manager:export',
   /** Opens the import dialog of the site archive. */
   importArchive: 'pages-manager:import',
+  /** Saves the selected component as a linked component (`{ component?, name? }`). */
+  saveComponent: 'pages-manager:component-save',
+  /** Opens the component of the selected instance (`{ component? }`). */
+  editComponent: 'pages-manager:component-edit',
+  /** Turns the selected instance into a plain copy (`{ component? }`). */
+  detachComponent: 'pages-manager:component-detach',
 } as const;

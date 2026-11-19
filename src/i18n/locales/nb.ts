@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Hoppet over: %s.',
   importErrors: 'Mislyktes: %s',
   badArchive: 'Ikke et nettstedsarkiv: %s',
+
+  /* ---- linked components ---- */
+  components: 'Komponenter',
+  newComponent: 'Ny komponent',
+  componentName: 'Komponent',
+  saveAsComponent: 'Lagre som komponent',
+  promptComponentName: 'Komponentnavn',
+  editComponent: 'Rediger komponent',
+  detachComponent: 'Koble fra komponent',
+  confirmRemoveComponent: 'Slette komponenten «%s»? Der den er brukt, blir den værende som en vanlig kopi.',
+  componentSaved: 'Komponenten «%s» er lagret',
+  editingComponent: 'Komponent «%s»: endringene gjelder på alle sider',
+  backTo: '← Tilbake til «%s»',
 };
 
 export default messages;

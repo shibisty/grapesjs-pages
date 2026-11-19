@@ -8,6 +8,7 @@ A GrapesJS plugin that turns the editor into a small multi-page site editor:
 - **Local storage** — every page is kept in IndexedDB (or any custom `PageStore`) and autosaved.
 - **Per-page undo/redo** — `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`) work on the history of the page you are on.
 - **Copy/paste between pages** — `Ctrl+C` / `Ctrl+V` copy whole components *with their styles* from one page to another.
+- **Linked components** — save a header, a footer or a form once and put it on any page from the *Components* blocks (or the context menu); edit it once and every page shows the change.
 - **Manual REST sync** — compare local pages with a server, review the plan (upload / download / delete / resolve conflicts) and apply it. The contract is in [`openapi.yaml`](./openapi.yaml).
 - **Remote mode (v2)** — the server is the source of truth and IndexedDB a cache and offline queue: layouts, templates and the site besides pages, a page tree with addresses and SEO, Publish and revisions. The contract is in [`openapi.v2.yaml`](./openapi.v2.yaml).
 - **23 languages** (the GrapesJS core locales + Ukrainian), RTL for ar/he/fa.
@@ -94,6 +95,40 @@ When [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-too
 - the tabs come back after a reload.
 
 There is no dependency on sidebar-tools: without it nothing changes. `workspaceTabs: false` turns the tabs off.
+
+## Linked components
+
+Parts that repeat across pages (a header, a footer, a sign-up form) are
+*components*: records of their own, listed in the sidebar's **Components**
+section, offered as blocks in the **Components** category of the Block
+Manager — so they can be dragged onto any page, and with
+[grapesjs-context-menu](https://www.npmjs.com/package/grapesjs-context-menu)
+1.2+ they are also in its *Add element ▸ Components* submenu.
+
+- **Make one**: right-click an element ▸ *Save as component* (or the command
+  `pages-manager:component-save`, or `components.save()`), or `+` in the
+  Components section for an empty one. The element is replaced by a linked
+  copy; its styles go with it.
+- **Linked copies** (instances) are read-only on the page: a click selects the
+  whole copy, which can be moved, duplicated, deleted and given its own outer
+  styles, but not edited inside.
+- **Edit**: double-click a copy, its toolbar's pencil or *Edit component* in
+  the context menu opens the component itself; a bar over the canvas says
+  so and leads back to the page. Every page shows the change the next time it
+  is opened.
+- **Detach**: *Detach from component* turns a copy into ordinary, editable
+  elements that no longer follow the component.
+- **Delete** a component: where it was used it stays as a plain copy.
+
+How it works: a copy is an element `<div data-gjsp-component="<id>">`. Each
+time a page is opened its copies are rebuilt from their components (ids are
+made unique per copy — `x` becomes `x-<copy id>` — and so are the `#id` rules;
+a component's class rules replace page rules with the same selector). The
+saved page and its published HTML contain the copies as they were then; in
+remote mode a server can swap in the component's latest published HTML (see
+`openapi.v2.yaml`). Components are synced like pages: v1 sends `kind:
+"component"`, remote mode uses `/components` (a server without it answers
+`404` and the components stay in the local cache).
 
 ## Remote mode (contract v2)
 
@@ -184,6 +219,13 @@ move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what dra
 exportArchive({ html? = true, onProgress? }): Promise<Uint8Array>   // the ZIP
 downloadArchive({ html?, onProgress? })                              // saved by the browser
 importArchive(file, { mode? = 'replace' | 'copy', site?, onProgress? }): Promise<ImportReport>
+// linked components (both modes)
+components.list(): Master[]                         // { id, name, components, styles }
+components.save(component = selected, name?)        // without a name: window.prompt
+components.edit(instanceOrId = selected)
+components.detach(instance = selected): Component | null
+components.insert(id, target?, at?): Component | null
+components.isInstance(component): boolean
 ```
 
 ### Events
@@ -203,6 +245,7 @@ importArchive(file, { mode? = 'replace' | 'copy', site?, onProgress? }): Promise
 | `remote` | `pages-manager:remote` | `'idle' \| 'saving' \| 'offline' \| 'error'` (remote) |
 | `exported` | `pages-manager:exported` | `{ bytes }` |
 | `imported` | `pages-manager:imported` | `ImportReport` |
+| `components` | `pages-manager:components` | `Master[]` — the list of components changed |
 
 ### Commands
 
@@ -210,21 +253,25 @@ importArchive(file, { mode? = 'replace' | 'copy', site?, onProgress? }): Promise
 `pages-manager:paste`, `pages-manager:sync`, `pages-manager:settings`,
 `pages-manager:export`, `pages-manager:import` (the archive dialogs); remote mode:
 `pages-manager:publish`, `pages-manager:refresh`, `pages-manager:revisions` and
-`pages-manager:properties` (both take `{ id }`, default the open record).
+`pages-manager:properties` (both take `{ id }`, default the open record);
+components: `pages-manager:component-save` (`{ component?, name? }`),
+`pages-manager:component-edit` and `pages-manager:component-detach`
+(`{ component? }`, default the selection).
 `core:undo` / `core:redo` are redefined to use the per-page history, so the
 undo/redo buttons of presets keep working.
 
 ## Site archive
 
 The sidebar's ⤓ and ⤒ buttons export the site to a ZIP and import one back
-(`exportArchive()` / `importArchive()`). It holds the **designs**: pages; in
-remote mode also layouts, templates with their field lists, and the site's
-styles and settings. Entries of templates and field values are content and
+(`exportArchive()` / `importArchive()`). It holds the **designs**: pages and
+linked components; in remote mode also layouts, templates with their field
+lists, and the site's styles and settings. Entries of templates and field values are content and
 are not in it.
 
 ```
 manifest.json            format, version, the records with their header fields
 site/                    project.json, style.css, settings.json
+components/<name>/       project.json, body.html, style.css, index.html   (linked components)
 layouts/<name>/          project.json, body.html, style.css
 templates/<name>/        project.json, body.html, style.css, index.html, fields.json
 pages/<address>/         project.json, body.html, style.css, index.html   (/ → pages/index)
@@ -241,13 +288,15 @@ pages/<address>/         project.json, body.html, style.css, index.html   (/ →
   HTML are lost). A record with markup and no `project.json` is built the
   same way. A ZIP of the folder (with one top folder) is accepted.
 - **Import modes.** `replace` (default): a record that exists (same id; a
-  page also by its address, a layout or template by its name) is
+  page also by its address, a layout, template or component by its name) is
   overwritten, the rest is created with the archive's ids — importing into
   another site keeps the ids, so a second import updates. `copy`: all new
   ids, references (layout, parent) follow, taken addresses get `-2`, `-3`…;
   the site record is left alone unless `site: true`.
-- Remote mode writes one record at a time, layouts and templates before
-  pages, parents before children; a record the server refuses is reported in
+- Components are written first (pages and layouts hold instances of them),
+  so the instances are rebuilt from the imported component when a page opens.
+- Remote mode writes one record at a time, components, layouts and templates
+  before pages, parents before children; a record the server refuses is reported in
   `ImportReport.errors` and the rest goes on.
 
 The format alone (no DOM, no GrapesJS) is `grapesjs-site-pages/archive`

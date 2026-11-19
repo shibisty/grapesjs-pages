@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'Omesos: %s.',
   importErrors: 'Han fallat: %s',
   badArchive: 'No és un arxiu del lloc: %s',
+
+  /* ---- linked components ---- */
+  components: 'Components enllaçats',
+  newComponent: 'Component nou',
+  componentName: 'Component enllaçat',
+  saveAsComponent: 'Desa com a component',
+  promptComponentName: 'Nom del component',
+  editComponent: 'Edita el component',
+  detachComponent: 'Desvincula del component',
+  confirmRemoveComponent: 'Voleu suprimir el component «%s»? On s’utilitza, es mantindrà com a còpia normal.',
+  componentSaved: 'S’ha desat el component «%s»',
+  editingComponent: 'Component «%s»: els canvis s’apliquen a totes les pàgines',
+  backTo: '← Torna a «%s»',
 };
 
 export default messages;

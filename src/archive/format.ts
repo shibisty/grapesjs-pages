@@ -7,6 +7,7 @@ import type { ProjectData, RecordKind } from '../types';
  * ```
  * manifest.json
  * site/                 project.json, style.css, settings.json
+ * components/<name>/    project.json, body.html, style.css, index.html  (linked components)
  * layouts/<name>/       project.json, body.html, style.css, index.html
  * templates/<name>/     project.json, body.html, style.css, index.html, fields.json
  * pages/<slug>/         project.json, body.html, style.css, index.html  (`/` → pages/index)
@@ -82,7 +83,7 @@ export interface ReadArchive {
 
 export class ArchiveError extends Error {}
 
-const KIND_DIR: Record<RecordKind, string> = { site: 'site', layout: 'layouts', template: 'templates', page: 'pages' };
+const KIND_DIR: Record<RecordKind, string> = { site: 'site', component: 'components', layout: 'layouts', template: 'templates', page: 'pages' };
 
 /** FNV-1a 32 bit, hex: enough to notice an edit, not a security measure. */
 export function contentHash(s: string): string {
@@ -232,7 +233,8 @@ export function packArchive(records: ArchiveRecord[], meta: Parameters<typeof ar
   return zipSync(zip, { mtime: new Date() });
 }
 
-const KINDS: RecordKind[] = ['site', 'layout', 'template', 'page'];
+/** Every kind an archive may hold — the keys of KIND_DIR, so a new kind cannot be forgotten here. */
+const KINDS = Object.keys(KIND_DIR) as RecordKind[];
 
 const parseJson = (s: string | undefined, what: string): any => {
   if (s == null) return undefined;
@@ -330,12 +332,13 @@ export function readArchive(bytes: Uint8Array): ReadArchive {
 }
 
 /**
- * The order an import writes records in: the site, layouts, templates,
- * then pages with every parent before its children (what a server that
+ * The order an import writes records in: the site, linked components
+ * (layouts and pages hold instances of them), layouts, templates, then
+ * pages with every parent before its children (what a server that
  * checks references needs).
  */
 export function importOrder<T extends Pick<ArchiveRecord, 'id' | 'kind' | 'parentId'>>(records: T[]): T[] {
-  const rank: Record<RecordKind, number> = { site: 0, layout: 1, template: 2, page: 3 };
+  const rank: Record<RecordKind, number> = { site: 0, component: 1, layout: 2, template: 3, page: 4 };
   const head = records.filter((r) => r.kind !== 'page').sort((a, b) => rank[a.kind] - rank[b.kind]);
   const pages = records.filter((r) => r.kind === 'page');
   const ids = new Set(pages.map((p) => p.id));

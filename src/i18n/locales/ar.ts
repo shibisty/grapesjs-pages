@@ -109,6 +109,19 @@ const messages: PagesLabels = {
   importSkipped: 'تم التخطي: %s.',
   importErrors: 'فشل: %s',
   badArchive: 'ليس أرشيف موقع: %s',
+
+  /* ---- linked components ---- */
+  components: 'المكونات',
+  newComponent: 'مكون جديد',
+  componentName: 'مكون',
+  saveAsComponent: 'حفظ كمكون',
+  promptComponentName: 'اسم المكون',
+  editComponent: 'تحرير المكون',
+  detachComponent: 'فصل عن المكون',
+  confirmRemoveComponent: 'حذف المكون «%s»؟ سيبقى كنسخة عادية حيث يُستخدم.',
+  componentSaved: 'تم حفظ المكون «%s»',
+  editingComponent: 'المكون «%s»: تُطبَّق التغييرات على كل الصفحات',
+  backTo: '← العودة إلى «%s»',
 };
 
 export default messages;
