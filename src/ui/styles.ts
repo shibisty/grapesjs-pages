@@ -126,6 +126,31 @@ p.gjsp-seo-hint{margin:0 0 10px}
 .gjsp-trait input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),.gjsp-trait select,.gjsp-trait textarea{width:100%;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.2);color:inherit;padding:5px 8px;border-radius:3px;box-sizing:border-box;font:inherit}
 .gjsp-trait input[type=checkbox],.gjsp-trait input[type=radio]{appearance:auto;-webkit-appearance:auto;display:inline-block;width:auto;height:auto;margin:0 6px 0 0;vertical-align:middle}
 .gjsp-trait select option{color:#222}
+.gjsp-board{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;background:#1e1e1e;color:#ddd;font:12px/1.4 var(--gjs-main-font,Helvetica,sans-serif)}
+.gjsp-board__bar{display:flex;align-items:center;gap:6px;height:40px;padding:0 10px;background:var(--gjs-primary-color,#2c2c2c);border-bottom:1px solid rgba(0,0,0,.4);flex:none}
+.gjsp-board__title{font-weight:600;margin-inline-end:8px}
+.gjsp-board__chips{display:flex;gap:4px;flex-wrap:wrap}
+.gjsp-board__chip{border:1px solid rgba(255,255,255,.18);background:none;color:inherit;border-radius:12px;padding:2px 10px;cursor:pointer;opacity:.55;font:inherit}
+.gjsp-board__chip.is-on{opacity:1;background:rgba(255,255,255,.1)}
+.gjsp-board__sp{flex:1}
+.gjsp-board__btn{background:none;border:0;color:inherit;cursor:pointer;min-width:28px;height:28px;border-radius:4px;font:inherit;font-size:14px}
+.gjsp-board__btn:hover{background:rgba(255,255,255,.1)}
+.gjsp-board__btn[data-role="zoom-100"]{font-size:12px;min-width:52px}
+.gjsp-board__vp{position:relative;flex:1;overflow:hidden;cursor:default;outline:none;background-color:#1e1e1e;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:24px 24px;touch-action:none}
+.gjsp-board__vp.is-space,.gjsp-board__vp.is-panning{cursor:grabbing}
+.gjsp-board__vp.is-space:not(.is-panning){cursor:grab}
+.gjsp-board__world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.gjsp-board__sec{position:absolute;white-space:nowrap;font-size:calc(22px * var(--gjsp-inv,1));font-weight:600;color:#aaa;transform:translateY(-110%)}
+.gjsp-board__frame{position:absolute;background:#fff;box-shadow:0 0 0 calc(1px * var(--gjsp-inv,1)) rgba(255,255,255,.12)}
+.gjsp-board__frame.is-current{box-shadow:0 0 0 calc(2px * var(--gjsp-inv,1)) rgba(120,180,255,.6)}
+.gjsp-board__frame.is-selected{box-shadow:0 0 0 calc(2px * var(--gjsp-inv,1)) var(--gjs-quaternary-color,#d278c9)}
+.gjsp-board__label{position:absolute;left:0;bottom:100%;max-width:100%;padding-bottom:calc(4px * var(--gjsp-inv,1));font-size:calc(12px * var(--gjsp-inv,1));color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:move;user-select:none}
+.gjsp-board__frame.is-selected .gjsp-board__label{color:var(--gjs-quaternary-color,#d278c9)}
+.gjsp-board__body{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.gjsp-board__wait{color:#999;font-size:calc(14px * var(--gjsp-inv,1));padding:8px;text-align:center}
+.gjsp-board__frame.is-loading .gjsp-board__wait::after{content:" …"}
+.gjsp-board__iframe{position:absolute;left:0;top:0;height:100%;border:0;pointer-events:none;background:#fff}
+.gjsp-board__hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:4px 10px;border-radius:12px;font-size:11px;opacity:.8;pointer-events:none;white-space:nowrap}
 `;
 
 export function injectCss(doc: Document = document): void {

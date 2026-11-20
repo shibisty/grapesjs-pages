@@ -42,6 +42,14 @@ export const EVENTS = {
   recordForm: 'pages-manager:record-form',
   /** A shared project key got a new value (`shared.register`). Payload: `{ key, value }`. */
   shared: 'pages-manager:shared',
+  /** The board was opened or closed. Payload: `{ open }`. */
+  board: 'pages-manager:board',
+  /**
+   * A record is about to be rendered for the board (opened silently).
+   * Payload: `{ record, waitFor(promise) }` — plugins that fill the canvas
+   * from their own data (grapesjs-storage) load it and pass the promise.
+   */
+  rendering: 'pages-manager:rendering',
 } as const;
 
 /** Command ids registered by the plugin. */
@@ -68,4 +76,6 @@ export const COMMANDS = {
   editComponent: 'pages-manager:component-edit',
   /** Turns the selected instance into a plain copy (`{ component? }`). */
   detachComponent: 'pages-manager:component-detach',
+  /** Opens (toggles) the board of all pages: Figma-like, over the editor. */
+  board: 'pages-manager:board',
 } as const;

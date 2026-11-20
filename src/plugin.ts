@@ -21,6 +21,11 @@ import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/m
 import { BREADCRUMBS_TYPE, registerBreadcrumbs } from './components/breadcrumbs';
 import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal, propertiesForm, openSectionsModal } from './ui/remoteModals';
 import { registerPageSettings } from './ui/settings';
+import { Board, type BoardState } from './board/Board';
+import { BoardRenderer } from './board/render';
+import type { BoardItem, BoardSection } from './board/layout';
+
+const BOARD_META = 'board';
 import { INSTANCE_ATTR, INSTANCE_TYPE } from './components/expand';
 import { pageSeoSections, siteSeoSections, type SeoMedia } from './ui/seoForm';
 import { mediaSources, pickMedia } from './ui/media';
@@ -353,6 +358,64 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   const markupHooks: MarkupHook[] = remote ? remote.markupHooks : [];
   const archive = new ArchiveService(editor, manager, store, remote, markupHooks);
 
+  /* ----------------------------- the board ----------------------------- */
+
+  const renderer = new BoardRenderer(editor, manager, () => markupHooks, { get: (k) => store.getMeta(k), set: (k, v) => store.setMeta(k, v) });
+  let board: Board | null = null;
+  let boardBack: string | null = null;
+  const boardItems = async (): Promise<BoardItem[]> =>
+    (await manager.list())
+      .filter((r) => !r.deleted && (r.kind || 'page') !== 'site')
+      .map((r) => {
+        const kind = r.kind || 'page';
+        const section: BoardSection = kind === 'page' ? (r.dataOf ? 'data' : 'page') : (kind as BoardSection);
+        return { id: r.id, name: r.name, section };
+      });
+  const canvasHead = (): string => {
+    const cfg = (editor.getConfig() as any).canvas || {};
+    const esc = (v: string) => v.replace(/"/g, '&quot;');
+    return (Array.isArray(cfg.styles) ? cfg.styles : [])
+      .map((x: unknown) => (typeof x === 'string' ? x : (x as { href?: string })?.href))
+      .filter(Boolean)
+      .map((href: string) => `<link rel="stylesheet" href="${esc(href)}">`)
+      .join('');
+  };
+  const closeBoard = (target: string | null): void => {
+    if (!board) return;
+    board.destroy();
+    board = null;
+    editor.trigger(EVENTS.board, { open: false });
+    void renderer.finish(target, boardBack).catch(report);
+  };
+  const toggleBoard = (): void => {
+    if (board) return closeBoard(null);
+    if (opts.injectCss) injectCss();
+    boardBack = manager.activeId;
+    const host = editor.getContainer() as HTMLElement;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    board = new Board({
+      t,
+      host,
+      width: opts.boardWidth,
+      items: boardItems,
+      activeId: () => boardBack,
+      render: (id, force) => renderer.render(id, force),
+      head: canvasHead,
+      open: (id) => closeBoard(id),
+      close: () => closeBoard(null),
+      load: () => store.getMeta<BoardState>(BOARD_META).then((v) => v || null),
+      save: (st) => void store.setMeta(BOARD_META, st).catch(report),
+    });
+    void board.show().catch(report);
+    editor.trigger(EVENTS.board, { open: true });
+  };
+  on(EVENTS.change, () => void board?.reload().catch(report));
+  offs.push(() => {
+    renderer.dispose();
+    board?.destroy();
+    board = null;
+  });
+
   const exportArchive = async (o?: ExportOptions): Promise<Uint8Array> => {
     const bytes = await archive.exportBytes(o);
     editor.trigger(EVENTS.exported, { bytes });
@@ -536,6 +599,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     },
   });
   editor.Commands.add(COMMANDS.siteSeo, { run: () => openSiteSeo() });
+  editor.Commands.add(COMMANDS.board, { run: () => toggleBoard() });
   editor.Commands.add(COMMANDS.properties, {
     run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
       const id = o.id || manager.activeId;
@@ -549,7 +613,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     path: () => crumbPath,
     label: () => t('breadcrumbs'),
     category: () => t('pages'),
-    labels: () => ({ separator: t('bcSeparator'), home: t('bcHome'), current: t('bcCurrent') }),
+    labels: () => ({ separator: t('bcSeparator'), home: t('bcHome'), current: t('bcCurrent'), designs: t('bcDesigns') }),
   });
   const refreshCrumbs = (): void => {
     const id = manager.activeId;
@@ -672,6 +736,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       move: (id, targetId, where) => void movePage(id, targetId, where).catch(report),
       exportArchive: () => void openExportModal(editor, t, archiveActions),
       importArchive: () => void openImportModal(editor, t, archiveActions),
+      ...(opts.board ? { board: () => toggleBoard() } : {}),
     }, remote);
 
     const container = editor.getContainer() as HTMLElement;

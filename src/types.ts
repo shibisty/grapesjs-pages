@@ -208,6 +208,10 @@ export interface PagesOptions {
    * sidebar-tools it does nothing.
    */
   workspaceTabs?: boolean;
+  /** The board of all pages (Figma-like, the ▦ button). Default `true`. */
+  board?: boolean;
+  /** Width of the board's frames, px (the device drawn). Default 1280. */
+  boardWidth?: number;
   keys?: Partial<KeyBindings>;
   /** Project data for new pages, or a function returning it. */
   blank?: ProjectData | (() => ProjectData) | null;

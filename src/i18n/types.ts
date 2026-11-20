@@ -168,6 +168,20 @@ export interface PagesLabels {
   bcSeparator: string;
   bcHome: string;
   bcCurrent: string;
+  bcDesigns: string;
+  /** The board of all pages. */
+  board: string;
+  boardHint: string;
+  boardZoomIn: string;
+  boardZoomOut: string;
+  boardZoom100: string;
+  boardFit: string;
+  boardRefresh: string;
+  boardPages: string;
+  boardData: string;
+  boardLayouts: string;
+  boardTemplates: string;
+  boardComponents: string;
   /* SEO, Open Graph, Schema.org (properties of a page, SEO of the site) */
   seoKeywords: string;
   seoCanonical: string;

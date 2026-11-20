@@ -22,6 +22,8 @@ export interface SidebarActions {
   /** SEO of the site (defaults, Open Graph, organization). */
   siteSeo?(): void;
   close(): void;
+  /** The board of all pages. */
+  board?(): void;
   /* remote mode */
   createKind?(kind: RecordKind): void;
   properties?(id: string): void;
@@ -53,7 +55,7 @@ export class Sidebar {
   private readonly status: HTMLDivElement;
   private readonly list: HTMLUListElement;
   private readonly btn: Record<
-    'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'exportArchive' | 'importArchive' | 'siteSeo' | 'settings' | 'close',
+    'undo' | 'redo' | 'create' | 'board' | 'publish' | 'revisions' | 'sync' | 'exportArchive' | 'importArchive' | 'siteSeo' | 'settings' | 'close',
     HTMLButtonElement
   >;
   private localCount = 0;
@@ -86,6 +88,7 @@ export class Sidebar {
       importArchive: tool('⤒', () => actions.importArchive?.()),
       siteSeo: tool('🔍', () => actions.siteSeo?.()),
       settings: tool('⚙', () => actions.settings()),
+      board: tool('▦', () => actions.board?.()),
       close: tool('✕', () => actions.close()),
     };
     this.title = h('span', { class: 'gjsp-title' });
@@ -132,6 +135,7 @@ export class Sidebar {
           ...(Object.keys(this.btn) as (keyof typeof this.btn)[])
             .filter((k) => (remote ? k !== 'settings' : k !== 'publish' && k !== 'revisions'))
             .filter((k) => k !== 'siteSeo' || !!actions.siteSeo)
+            .filter((k) => k !== 'board' || !!actions.board)
             .map((k) => this.btn[k])
         )
       ),
@@ -186,6 +190,7 @@ export class Sidebar {
       undo: t('undo'),
       redo: t('redo'),
       create: t('newPage'),
+      board: t('board'),
       publish: t('publish'),
       revisions: t('revisions'),
       sync: this.remote ? t('refresh') : t('sync'),

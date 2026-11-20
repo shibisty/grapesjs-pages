@@ -27,9 +27,16 @@ export interface BreadcrumbsOptions {
   home?: string;
   /** Show the open page as the last item (default: yes). */
   current?: boolean;
+  /**
+   * Show the design page of a data record (default: no) — the page a data
+   * record takes its design from is a template, not a level of the site.
+   */
+  designs?: boolean;
 }
 
-export function breadcrumbsHtml(path: PageRecord[], o: BreadcrumbsOptions = {}): string {
+export function breadcrumbsHtml(all: PageRecord[], o: BreadcrumbsOptions = {}): string {
+  const designs = new Set(all.map((r) => r.dataOf).filter(Boolean));
+  const path = o.designs ? all : all.filter((r, i) => i === all.length - 1 || !designs.has(r.id));
   const shown = o.current === false ? path.slice(0, -1) : path;
   if (!shown.length) return '';
   const sep = o.separator ? `<span class="gjsp-bc-sep" aria-hidden="true">${esc(o.separator)}</span>` : '';
@@ -48,6 +55,7 @@ const optionsOf = (c: any): BreadcrumbsOptions => ({
   separator: String(c.get?.('separator') || ''),
   home: String(c.get?.('home') || ''),
   current: c.get?.('current') !== false,
+  designs: c.get?.('designs') === true,
 });
 
 /**
@@ -62,15 +70,16 @@ export function registerBreadcrumbs(
     path: () => PageRecord[];
     label: () => string;
     category: () => string;
-    labels?: () => { separator: string; home: string; current: string };
+    labels?: () => { separator: string; home: string; current: string; designs?: string };
   }
 ): { refresh(): void; destroy(): void } {
   const traits = (): any[] => {
-    const l = o.labels?.() || { separator: 'Separator', home: 'First item', current: 'Show the current page' };
+    const l = o.labels?.() || { separator: 'Separator', home: 'First item', current: 'Show the current page', designs: 'Show the design page of data' };
     return [
       { type: 'text', name: 'separator', label: l.separator, changeProp: true, placeholder: '/' },
       { type: 'text', name: 'home', label: l.home, changeProp: true },
       { type: 'checkbox', name: 'current', label: l.current, changeProp: true },
+      { type: 'checkbox', name: 'designs', label: l.designs || 'Show the design page of data', changeProp: true },
     ];
   };
   const dc = editor.DomComponents;
@@ -88,6 +97,7 @@ export function registerBreadcrumbs(
         separator: '',
         home: '',
         current: true,
+        designs: false,
       },
       init(this: any) {
         this.set('traits', traits());
@@ -98,7 +108,7 @@ export function registerBreadcrumbs(
           const el = this.getEl?.();
           if (el) el.innerHTML = breadcrumbsHtml(o.path(), optionsOf(this));
         };
-        this.on('change:separator change:home change:current', sync);
+        this.on('change:separator change:home change:current change:designs', sync);
       },
       // The trail is not kept: it follows the tree and the open page.
       getInnerHTML(this: any) {

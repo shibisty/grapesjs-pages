@@ -155,6 +155,10 @@ describe('breadcrumbs', () => {
     expect(breadcrumbsHtml([{ name: 'Home', slug: '/' } as any, { name: 'A', slug: '/a' } as any, { name: 'B' } as any], { separator: '›', home: 'Start', current: false })).toBe(
       '<ol><li><a href="/">Start</a></li><li><span class="gjsp-bc-sep" aria-hidden="true">›</span><a href="/a">A</a></li></ol>'
     );
+    // a data record: its design page is a template, not a level of the site
+    const trail = [{ id: 'h', name: 'Home', slug: '/' }, { id: 'n', name: 'News', slug: '/news' }, { id: 'd', name: 'First', slug: '/news/first', dataOf: 'n' }] as any[];
+    expect(breadcrumbsHtml(trail)).toBe('<ol><li><a href="/">Home</a></li><li><span aria-current="page">First</span></li></ol>');
+    expect(breadcrumbsHtml(trail, { designs: true })).toContain('>News</a>');
     const s = await createEditor();
     editor = s.editor;
     const [home] = await s.api.list();
@@ -163,7 +167,7 @@ describe('breadcrumbs', () => {
     await settle(s.api);
     const bc = editor.getWrapper()!.append({ type: BREADCRUMBS_TYPE })[0] as any;
     await tick(20);
-    expect(bc.get('traits').map((x: any) => x.get('name'))).toEqual(['separator', 'home', 'current']);
+    expect(bc.get('traits').map((x: any) => x.get('name'))).toEqual(['separator', 'home', 'current', 'designs']);
     bc.set({ separator: '»', home: 'Home' });
     expect(bc.getEl().innerHTML).toContain('>Home</a>');
     expect(bc.getEl().innerHTML).toContain('gjsp-bc-sep" aria-hidden="true">»</span>');

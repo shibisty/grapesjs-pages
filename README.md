@@ -92,8 +92,17 @@ On the first start (empty store) the current editor content — `components`,
 GrapesJS's **Component settings** (Trait Manager) get:
 
 - **the body** — the open record's properties: name, address, parent, menu, the SEO / Open Graph / Schema.org tabs and the sections of other plugins (e.g. grapesjs-storage's template), with Save. The properties dialog stays;
-- **breadcrumbs** — separator, the first item's text (e.g. "Home"), show the current page; kept with the component;
+- **breadcrumbs** — separator, the first item's text (e.g. "Home"), show the current page, show the design page of data records (off: a data record's trail skips the page it takes its design from — that page is a template, not a level of the site); kept with the component;
 - **a linked component** — what it is linked to, *Edit component*, *Detach*.
+
+## The board
+
+The **▦** button of the pages sidebar (or the command `pages-manager:board`) covers the editor with a Figma-like board: every page, data record, layout, template and component as a frame on an endless plane, in sections (the chips on top show / hide them; data records are hidden at first).
+
+- Move: drag the background, the middle button, Space + drag, wheel / trackpad. Zoom: Ctrl / ⌘ + wheel or pinch, `+` / `−`, `Shift+1` fits all, `Shift+0` is 100%.
+- Frames are drawn only when in view (at most 24 live at once, the nearest first; the others wait as named boxes) as static iframes — no scripts — and take their content's height. Drag a frame by its title to place it; the places, the heights and the view are kept (store meta `board`).
+- A frame shows what a publish would: the record is opened in the editor silently, other plugins get `pages-manager:rendering` (`{ record, waitFor(promise) }` — grapesjs-storage loads the record's data), then the publish hooks run. The result is kept per record by its `updatedAt` (and its design's); **⟳** draws everything again.
+- Double click (or Enter on the selected frame) opens the record in the editor; Esc / ✕ goes back to the page you were on. Options: `board` (default `true`), `boardWidth` (default `1280`).
 
 ## Page tabs (grapesjs-sidebar-tools)
 
