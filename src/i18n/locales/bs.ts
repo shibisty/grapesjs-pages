@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Počni od',
   emptyComponent: 'Prazno',
   createComponent: 'Kreiraj',
+  general: 'Općenito',
+  dataOf: 'Podaci: %s',
+  breadcrumbs: 'Putanja',
 };
 
 export default messages;

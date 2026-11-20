@@ -7,7 +7,7 @@ import type { RemoteEditor } from '../remote/RemoteEditor';
 import type { PageRecord, RecordAction, RecordKind } from '../types';
 import { fmt, report } from '../utils';
 import { h } from './dom';
-import { type DropWhere, keyboardMove, matches, pageTree, searchTree, subtree } from './tree';
+import { createdOrder, type DropWhere, keyboardMove, matches, pageTree, searchTree, subtree } from './tree';
 
 export interface SidebarActions {
   open(id: string): void;
@@ -302,7 +302,7 @@ export class Sidebar {
             const keys: Record<string, 'up' | 'down' | 'in' | 'out'> = { ArrowUp: 'up', ArrowDown: 'down', ArrowRight: 'in', ArrowLeft: 'out' };
             const dir = keys[k];
             const rtl = this.root.getAttribute('dir') === 'rtl';
-            const m = dir && keyboardMove(tree.pages, r.id, rtl && dir === 'in' ? 'out' : rtl && dir === 'out' ? 'in' : dir);
+            const m = dir && keyboardMove(tree.pages, r.id, rtl && dir === 'in' ? 'out' : rtl && dir === 'out' ? 'in' : dir, this.remote ? undefined : createdOrder);
             e.preventDefault();
             if (m) a.move(r.id, m.targetId, m.where);
           } else if (k === 'ArrowDown' || k === 'ArrowUp') {
@@ -338,7 +338,7 @@ export class Sidebar {
       h(
         'div',
         { class: 'gjsp-main' },
-        h('div', { class: 'gjsp-name', title: r.name }, r.name),
+        h('div', { class: 'gjsp-name', title: r.name }, r.dataOf ? h('span', { class: 'gjsp-data-icon', 'aria-hidden': 'true' }, '▤ ') : null, r.name),
         h('div', { class: 'gjsp-sub' }, this.subtitle(r))
       ),
       h(
@@ -350,13 +350,16 @@ export class Sidebar {
           b.dataset.action = x.id;
           return b;
         }),
-        this.remote && a.properties ? act('✎', t('properties'), () => a.properties!(r.id)) : act('✎', t('rename'), () => a.rename(r.id)),
+        a.properties && (this.remote || (r.kind || 'page') === 'page')
+          ? act('✎', t('properties'), () => a.properties!(r.id))
+          : act('✎', t('rename'), () => a.rename(r.id)),
         r.kind === 'site' ? null : act('⧉', t('duplicate'), () => a.duplicate(r.id)),
         r.kind === 'site' ? null : act('✕', t('remove'), () => a.remove(r.id))
       )
     );
     if (depth) li.style.paddingInlineStart = `${10 + depth * 14}px`;
     if (r.conflict) li.classList.add('has-conflict');
+    if (r.dataOf) li.classList.add('is-data');
     if (tree && a.move) this.draggable(li, r.id, tree.pages);
     return li;
   }
@@ -435,12 +438,18 @@ export class Sidebar {
     const rows = await this.manager.list();
     if (this.remote) this.renderRemote(rows);
     else {
-      // Pages, then the linked components (local mode has no other kinds).
-      const pages = rows.filter((r) => r.kind !== 'component');
+      // Pages as a tree, then the linked components (local mode has no other kinds).
+      const pages = rows.filter((r) => r.kind !== 'component' && !r.templateId);
       const comps = rows.filter((r) => r.kind === 'component');
-      const shown = pages.filter((r) => matches(r, this.query));
+      const visible = searchTree(pages, this.query);
+      const tree = pageTree(pages, visible ? new Set() : this.collapsed, createdOrder).filter((row) => !visible || visible.has(row.rec.id));
+      const shown = tree.map((x) => x.rec);
       const shownComps = comps.filter((r) => matches(r, this.query));
-      const items: HTMLLIElement[] = shown.map((r) => this.row(r));
+      const items: HTMLLIElement[] = tree.map(({ rec, depth, parent }) => {
+        const li = this.row(rec, depth, { parent, open: !!visible || !this.collapsed.has(rec.id), pages });
+        if (visible) li.classList.add(matches(rec, this.query) ? 'is-match' : 'is-context');
+        return li;
+      });
       if (!this.query || shownComps.length) items.push(this.sectionHead(this.t('components'), 'component', this.t('newComponent')), ...shownComps.map((r) => this.row(r)));
       if (this.query && !shown.length && !shownComps.length && rows.length) items.push(this.nothing());
       this.list.replaceChildren(...items);

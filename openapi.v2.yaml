@@ -33,7 +33,8 @@ info:
     owns them).
 
     - **Publishing** sends `editor.getHtml()` (the body''s content, without `<body>`) and `editor.getCss()`; the
-    server sanitizes them. An entry (a page with `template_id`) publishes with an empty body. A layout marks the
+    server sanitizes them. An entry (a page with `template_id`) publishes with an empty body; a data record (a page with
+    `data_of`) publishes the markup of its page's design filled with its own data. A layout marks the
     page''s place with `<page-slot></page-slot>` (or an element with `data-page-slot`).
 
     - Errors are `{"error": "…"}`; invalid input `422` with `{"errors": {"field": ["…"]}}`.
@@ -511,6 +512,10 @@ components:
         template_id:
           type: string
           format: uuid
+        data_of:
+          type: string
+          format: uuid
+          description: A data record (grapesjs-storage) of that page.
         parent_id:
           type: string
           format: uuid
@@ -609,6 +614,14 @@ components:
           - 'null'
           format: uuid
           description: Makes the page an entry of the template.
+        data_of:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: 'Makes the page a data record of that page (grapesjs-storage): it has no design of its own,
+            it is rendered with the design of that page (followed through data records) and its own values (the
+            storage entry with the same id). The editor sends `data` only for pages that are not data records.'
         parent_id:
           type:
           - string

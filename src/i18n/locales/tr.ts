@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Şununla başla',
   emptyComponent: 'Boş',
   createComponent: 'Oluştur',
+  general: 'Genel',
+  dataOf: '%s verileri',
+  breadcrumbs: 'İçerik yolu',
 };
 
 export default messages;

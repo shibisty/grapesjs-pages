@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Почати з',
   emptyComponent: 'Порожній',
   createComponent: 'Створити',
+  general: 'Основне',
+  dataOf: 'Дані: %s',
+  breadcrumbs: 'Хлібні крихти',
 };
 
 export default messages;

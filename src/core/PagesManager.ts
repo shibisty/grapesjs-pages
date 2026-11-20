@@ -2,7 +2,7 @@ import type { Editor } from 'grapesjs';
 import { EVENTS } from '../events';
 import type { Translator } from '../i18n';
 import { META, type PageStore } from '../store/types';
-import type { CreateInit, OpenOptions, PageRecord, ProjectData, ResolvedOptions } from '../types';
+import type { CreateInit, OpenOptions, PageRecord, ProjectData, RecordPatch, ResolvedOptions } from '../types';
 import { clone, report, sleep, uid } from '../utils';
 import { MetaSharedBackend, type SharedBackend } from './SharedData';
 import { SnapshotHistory } from './SnapshotHistory';
@@ -23,6 +23,22 @@ export const isEditorAlive = (editor: Editor): boolean => {
  * so a record stores only its own content. Must be pure and idempotent.
  */
 export type RecordHook = (data: ProjectData, rec: PageRecord | undefined) => ProjectData | void | Promise<ProjectData | void>;
+
+/** A page address: `/` or `/a/b-c` (lower case, dashes). */
+export function slugOf(raw: string): string {
+  const parts = String(raw || '')
+    .toLowerCase()
+    .split('/')
+    .map((p) =>
+      p
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    )
+    .filter(Boolean);
+  return '/' + parts.join('/');
+}
 
 export const emptyProject = (): ProjectData =>
   ({
@@ -312,9 +328,25 @@ export class PagesManager {
     }
   }
 
+  /**
+   * The record whose design `rec` shows: itself, or — for a data record —
+   * the page it belongs to (followed through data records of data records).
+   */
+  async designOwner(rec: PageRecord | undefined): Promise<PageRecord | undefined> {
+    let cur = rec;
+    for (let i = 0; cur?.dataOf && i < 16; i++) {
+      const next = await this.store.get(cur.dataOf);
+      if (!next || next.deleted || next.id === cur.id) break;
+      cur = next;
+    }
+    return cur;
+  }
+
   private async persist(id: string, data: ProjectData): Promise<void> {
-    const rec = await this.store.get(id);
+    // A data record has no design: what is edited while it is open is its page's design.
+    const rec = await this.designOwner(await this.store.get(id));
     if (!rec || rec.deleted) return;
+    id = rec.id;
     rec.data = this.storedForm(id, data);
     rec.updatedAt = Date.now();
     rec.dirty = true;
@@ -437,7 +469,47 @@ export class PagesManager {
     (Object.keys(extra) as (keyof typeof extra)[]).forEach((k) => {
       if (extra[k] !== undefined) (rec as any)[k] = extra[k];
     });
-    if (extra.kind || extra.slug || extra.parentId !== undefined || extra.layoutId !== undefined) rec.dirtyMeta = true;
+    if (extra.kind || extra.slug || extra.parentId !== undefined || extra.layoutId !== undefined || extra.dataOf) rec.dirtyMeta = true;
+    if (extra.values) {
+      const v: Record<string, unknown> = {};
+      Object.entries(extra.values).forEach(([k, x]) => x !== null && x !== undefined && x !== '' && (v[k] = x));
+      rec.values = v;
+      rec.dirtyValues = Object.keys(v);
+    }
+    return rec;
+  }
+
+  /**
+   * Header fields of a record in the local store (remote mode has its own,
+   * which also marks what to send): name, slug, parent, layout, position,
+   * values (`null` deletes a key).
+   */
+  async updateMeta(id: string, patch: RecordPatch): Promise<PageRecord | undefined> {
+    const rec = await this.store.get(id);
+    if (!rec || rec.deleted) return undefined;
+    if (patch.name != null && patch.name.trim()) rec.name = patch.name.trim();
+    if ((rec.kind || 'page') === 'page') {
+      if (patch.slug !== undefined) {
+        const s = String(patch.slug || '').trim();
+        if (s) rec.slug = slugOf(s);
+        else delete rec.slug;
+      }
+      if (patch.parentId !== undefined) rec.parentId = patch.parentId && patch.parentId !== id ? patch.parentId : null;
+      if (patch.layoutId !== undefined) rec.layoutId = patch.layoutId || null;
+      if (patch.position != null && Number.isFinite(patch.position)) rec.position = Math.trunc(patch.position);
+    }
+    if (patch.values) {
+      const values = { ...(rec.values || {}) };
+      Object.entries(patch.values).forEach(([k, v]) => {
+        if (v === null || v === undefined || v === '') delete values[k];
+        else values[k] = v;
+      });
+      rec.values = values;
+    }
+    rec.updatedAt = Date.now();
+    rec.dirty = true;
+    await this.store.put(rec);
+    this.emitChange();
     return rec;
   }
 
@@ -448,7 +520,8 @@ export class PagesManager {
     if (!rec || rec.deleted || !this.alive()) return;
     this.active = id;
     await this.store.setMeta(META.active, id);
-    let data = rec.data || this.blank();
+    const owner = rec.dataOf ? await this.designOwner(rec) : rec;
+    let data = owner?.data || rec.data || this.blank();
     if (this.prepare) {
       try {
         data = await this.prepare(data, rec);
@@ -486,7 +559,9 @@ export class PagesManager {
 
   async create({ name, data, ...extra }: CreateInit = {}): Promise<PageRecord> {
     await this.flush();
-    const rec = this.newRecord(name || (await this.nextName()), data ? clone(data) : this.blank(), extra);
+    // A data record has no design of its own (it shows its page's).
+    const own = extra.dataOf ? (null as unknown as ProjectData) : data ? clone(data) : this.blank();
+    const rec = this.newRecord(name || (await this.nextName()), own, extra);
     await this.store.put(rec);
     await this.open(rec.id, { force: true });
     return rec;
@@ -498,9 +573,13 @@ export class PagesManager {
     if (!src || src.deleted) return undefined;
     return this.create({
       name: `${src.name} (${this.t('copySuffix')})`,
-      data: src.data || this.blank(),
+      data: src.dataOf ? (src.data as ProjectData) : src.data || this.blank(),
       ...(src.kind ? { kind: src.kind } : {}),
-      ...(src.kind === 'page' || (!src.kind && src.layoutId) ? { parentId: src.parentId ?? null, layoutId: src.layoutId ?? null } : {}),
+      ...(src.kind === 'page' || (!src.kind && (src.layoutId || src.parentId || src.dataOf))
+        ? { parentId: src.parentId ?? null, layoutId: src.layoutId ?? null }
+        : {}),
+      ...(src.dataOf ? { dataOf: src.dataOf } : {}),
+      ...(src.values ? { values: clone(src.values) } : {}),
     });
   }
 
@@ -524,6 +603,8 @@ export class PagesManager {
   async remove(id: string): Promise<boolean> {
     const rec = await this.store.get(id);
     if (!rec || rec.deleted) return false;
+    // Its data records cannot be shown without it: they go too.
+    for (const d of (await this.list()).filter((r) => r.dataOf === id)) await this.remove(d.id);
     const wasActive = id === this.active;
     if (wasActive) await this.discardPending();
     if (rec.remote) {

@@ -158,4 +158,10 @@ export interface PagesLabels {
   startFrom: string;
   emptyComponent: string;
   createComponent: string;
+  /** Tab of the main fields in the properties dialog */
+  general: string;
+  /** Sub-line of a data record (grapesjs-storage): `%s` is its page */
+  dataOf: string;
+  /** The breadcrumbs component and its block */
+  breadcrumbs: string;
 }

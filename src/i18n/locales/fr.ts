@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Partir de',
   emptyComponent: 'Vide',
   createComponent: 'Créer',
+  general: 'Général',
+  dataOf: 'Données de %s',
+  breadcrumbs: 'Fil d’Ariane',
 };
 
 export default messages;

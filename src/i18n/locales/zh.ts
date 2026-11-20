@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: '起点',
   emptyComponent: '空白',
   createComponent: '创建',
+  general: '常规',
+  dataOf: '%s 的数据',
+  breadcrumbs: '面包屑导航',
 };
 
 export default messages;

@@ -60,6 +60,13 @@ export interface PageRecord {
   layoutId?: string | null;
   /** Set: the page is an entry of that template (edited by grapesjs-storage). */
   templateId?: string | null;
+  /**
+   * Set: a data record of that page (grapesjs-storage). It has no design of
+   * its own: it opens with the design of that page (followed up to a page
+   * that is not a data record), and design edits made while it is open are
+   * saved to that page. Its own content is its values (in grapesjs-storage).
+   */
+  dataOf?: string | null;
   status?: PageStatus;
   publishedAt?: string | null;
   /**
@@ -117,6 +124,36 @@ export interface RecordAction {
   /** A short text or symbol shown on the button. */
   icon?: string;
   run(record: PageRecord): void;
+}
+
+/**
+ * A part of the "new page" and "properties" dialogs another plugin adds
+ * (`pages-manager:record-form`): e.g. grapesjs-storage's template choice and
+ * the page's data. On create the dialog is shown only when some plugin adds
+ * a section.
+ */
+export interface RecordFormSection {
+  id: string;
+  label: string;
+  /** Shown as a tab of its own (properties); else under the main fields. */
+  tab?: boolean;
+  el: HTMLElement;
+  /** Values the record gets (merged into `values`; `null` deletes a key). */
+  values?(): Record<string, unknown>;
+  /** Runs after the record was created or saved (e.g. to write the plugin's own data). */
+  save?(record: PageRecord): void | Promise<void>;
+  /** A message stops the save and is shown. */
+  validate?(): string | null | undefined;
+}
+
+/** Payload of `pages-manager:record-form`. */
+export interface RecordFormRequest {
+  mode: 'create' | 'edit';
+  /** Edit: the record; create: null. */
+  record: PageRecord | null;
+  /** Create: the parent chosen so far. */
+  parentId?: string | null;
+  sections: RecordFormSection[];
 }
 
 export interface ServerSettings {
@@ -228,6 +265,10 @@ export interface CreateInit {
   parentId?: string | null;
   layoutId?: string | null;
   position?: number;
+  /** A data record of that page (see `PageRecord.dataOf`). */
+  dataOf?: string | null;
+  /** Initial values (`values` of the record). */
+  values?: Record<string, unknown>;
 }
 
 /** Header fields of a record, as the properties dialog edits them. */
@@ -283,12 +324,23 @@ export interface PagesManagerApi {
   /** Programmatic sync without the dialog: `plan()` then `apply(plan)`. */
   syncService: SyncService;
 
+  /** Changes header fields (name, slug, parent, layout, position, values) — both modes. */
+  update(id: string, patch: RecordPatch): Promise<PageRecord | undefined>;
+  /**
+   * Moves a page before, after or inside another one (what drag and drop
+   * and Alt+arrows do); siblings are renumbered. Resolves to how many
+   * pages changed (0: not possible, e.g. into its own subtree). Both modes.
+   */
+  move(id: string, targetId: string, where: 'before' | 'inside' | 'after'): Promise<number>;
+  /** The record whose design a record shows: itself, or for a data record the page it belongs to. */
+  designOf(id: string): Promise<PageRecord | undefined>;
+  /** The page and its ancestors, root first (for breadcrumbs). */
+  pathOf(id: string): Promise<PageRecord[]>;
+
   /* ---- remote mode (contract v2); they reject in local mode ---- */
 
   /** Is the plugin in remote mode? */
   isRemote(): boolean;
-  /** Changes header fields (name, slug, parent, layout, position, values). */
-  update(id: string, patch: RecordPatch): Promise<PageRecord | undefined>;
   /** Makes the record live: saves, then sends its HTML and CSS (an entry: its values). */
   publish(id?: string): Promise<PageRecord>;
   /** Takes a page off the site. */
@@ -302,12 +354,6 @@ export interface PagesManagerApi {
   resolve(id: string, choice: 'local' | 'remote' | 'both'): Promise<void>;
   /** Uploads the pages of the v1 local database as new pages; resolves to how many. */
   importLocal(): Promise<number>;
-  /**
-   * Moves a page before, after or inside another one (what drag and drop
-   * and Alt+arrows do); siblings are renumbered. Resolves to how many
-   * pages changed (0: not possible, e.g. into its own subtree).
-   */
-  move(id: string, targetId: string, where: 'before' | 'inside' | 'after'): Promise<number>;
 
   /* ---- site archive (both modes) ---- */
 

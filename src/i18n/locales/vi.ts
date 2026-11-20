@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Bắt đầu từ',
   emptyComponent: 'Trống',
   createComponent: 'Tạo',
+  general: 'Chung',
+  dataOf: 'Dữ liệu của %s',
+  breadcrumbs: 'Đường dẫn',
 };
 
 export default messages;

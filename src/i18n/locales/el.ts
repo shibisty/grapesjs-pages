@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Έναρξη από',
   emptyComponent: 'Κενό',
   createComponent: 'Δημιουργία',
+  general: 'Γενικά',
+  dataOf: 'Δεδομένα: %s',
+  breadcrumbs: 'Διαδρομή πλοήγησης',
 };
 
 export default messages;

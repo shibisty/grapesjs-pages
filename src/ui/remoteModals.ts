@@ -2,7 +2,8 @@ import type { Editor } from 'grapesjs';
 import { isEditorAlive } from '../core/PagesManager';
 import type { Translator } from '../i18n';
 import type { RemoteEditor } from '../remote/RemoteEditor';
-import type { PageRecord, Revision } from '../types';
+import { EVENTS } from '../events';
+import type { PageRecord, RecordFormRequest, RecordFormSection, RecordPatch, Revision } from '../types';
 import { fmt, report } from '../utils';
 import { h } from './dom';
 
@@ -18,7 +19,7 @@ const showErr = (box: HTMLElement, e: unknown): void => {
 
 /** Pages that may be the parent of `rec`: not itself, not one of its descendants. */
 export function parentChoices(rec: PageRecord, all: PageRecord[]): PageRecord[] {
-  const pages = all.filter((r) => !r.deleted && (r.kind || 'page') === 'page' && !r.templateId);
+  const pages = all.filter((r) => !r.deleted && (r.kind || 'page') === 'page' && !r.templateId && !r.dataOf);
   const below = new Set<string>([rec.id]);
   let grew = true;
   while (grew) {
@@ -38,14 +39,63 @@ const options = (t: Translator, items: PageRecord[], current: string | null | un
   ...items.map((r) => h('option', { value: r.id, selected: r.id === current }, r.slug ? `${r.name} — ${r.slug}` : r.name)),
 ];
 
+/** What the properties dialog needs: where records are read and how a header is written. */
+export interface PropertiesDeps {
+  store: { get(id: string): Promise<PageRecord | undefined>; all(): Promise<PageRecord[]> };
+  update(id: string, patch: RecordPatch): Promise<PageRecord | undefined>;
+  /** Remote mode: layouts exist. */
+  remote: boolean;
+}
+
+/** Sections other plugins add to the "new page" / "properties" dialogs. */
+export function formSections(editor: Editor, req: Omit<RecordFormRequest, 'sections'>): RecordFormSection[] {
+  const sections: RecordFormSection[] = [];
+  try {
+    editor.trigger(EVENTS.recordForm, { ...req, sections });
+  } catch (e) {
+    report(e);
+  }
+  return sections.filter((s) => s && s.el instanceof HTMLElement && s.id);
+}
+
+/** Merged values of the sections; a message when one of them refuses. */
+async function runSections(sections: RecordFormSection[]): Promise<{ values: Record<string, unknown>; error: string | null }> {
+  const values: Record<string, unknown> = {};
+  for (const s of sections) {
+    const err = s.validate?.();
+    if (err) return { values, error: err };
+    Object.assign(values, s.values?.() || {});
+  }
+  return { values, error: null };
+}
+
+/** Main fields + the sections that are tabs of their own. */
+function tabbed(t: Translator, main: HTMLElement[], sections: RecordFormSection[]): HTMLElement[] {
+  const inline = sections.filter((s) => !s.tab);
+  const tabs = sections.filter((s) => s.tab);
+  const general = h('div', { class: 'gjsp-tab-pane', 'data-pane': 'general' }, ...main, ...inline.map((s) => h('div', { class: 'gjsp-section-form', 'data-section': s.id }, s.el)));
+  if (!tabs.length) return [general];
+  const panes = [general, ...tabs.map((s) => h('div', { class: 'gjsp-tab-pane', 'data-pane': s.id, hidden: true }, s.el))];
+  const show = (id: string): void => {
+    panes.forEach((p) => (p.hidden = p.dataset.pane !== id));
+    bar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.classList.toggle('is-active', b.dataset.tab === id));
+  };
+  const tabBtn = (id: string, label: string) =>
+    h('button', { type: 'button', class: 'gjsp-tab' + (id === 'general' ? ' is-active' : ''), 'data-tab': id, onclick: () => show(id) }, label);
+  const bar = h('div', { class: 'gjsp-tabs', role: 'tablist' }, tabBtn('general', t('general')), ...tabs.map((s) => tabBtn(s.id, s.label)));
+  return [bar, ...panes];
+}
+
 /**
  * A record's header: name for every kind; a page also gets its address,
- * parent, layout, SEO title and description and "show in the menu".
+ * parent, (remote) layout, SEO title and description and "show in the
+ * menu". Other plugins add sections (`pages-manager:record-form`), e.g. the
+ * page's data as a tab of its own.
  */
-export async function openPropertiesModal(editor: Editor, remote: RemoteEditor, t: Translator, id: string): Promise<HTMLElement | null> {
-  const rec = await remote.store.get(id);
+export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, t: Translator, id: string): Promise<HTMLElement | null> {
+  const rec = await deps.store.get(id);
   if (!rec || rec.deleted) return null;
-  const all = await remote.store.all();
+  const all = await deps.store.all();
   const isPage = (rec.kind || 'page') === 'page';
   const input = (name: string, value: string, type = 'text') => h('input', { class: 'gjsp-input', type, name, value });
   const name = input('name', rec.name);
@@ -61,34 +111,46 @@ export async function openPropertiesModal(editor: Editor, remote: RemoteEditor, 
     slug = input('slug', rec.slug || '');
     slug.placeholder = '/about';
     parent = h('select', { class: 'gjsp-select', name: 'parent' }, ...options(t, parentChoices(rec, all), rec.parentId));
-    const layouts = all.filter((r) => !r.deleted && r.kind === 'layout');
-    layout = h('select', { class: 'gjsp-select', name: 'layout' }, ...options(t, layouts, rec.layoutId));
     seoTitle = input('seo.title', String(v['seo.title'] ?? ''));
     seoDescription = h('textarea', { class: 'gjsp-input', name: 'seo.description', rows: '3' }, String(v['seo.description'] ?? ''));
     inMenu = h('input', { type: 'checkbox', name: 'in_menu', checked: v.in_menu === true });
+    fields.push(h('label', {}, t('slug'), slug), h('label', {}, t('parent'), parent));
+    if (deps.remote) {
+      const layouts = all.filter((r) => !r.deleted && r.kind === 'layout');
+      layout = h('select', { class: 'gjsp-select', name: 'layout' }, ...options(t, layouts, rec.layoutId));
+      fields.push(h('label', {}, t('layout'), layout));
+    }
     fields.push(
-      h('label', {}, t('slug'), slug),
-      h('label', {}, t('parent'), parent),
-      h('label', {}, t('layout'), layout),
       h('label', {}, t('seoTitle'), seoTitle),
       h('label', {}, t('seoDescription'), seoDescription),
       h('label', { class: 'gjsp-check' }, inMenu, ' ', t('inMenu'))
     );
   }
+  const sections = formSections(editor, { mode: 'edit', record: { ...rec } });
   const msg = errBox();
   const save = async (): Promise<void> => {
     try {
-      await remote.update(id, {
+      const extra = await runSections(sections);
+      if (extra.error) return showErr(msg, new Error(extra.error));
+      const next = await deps.update(id, {
         name: name.value,
         ...(isPage
           ? {
-              slug: slug!.value || undefined,
+              slug: slug!.value || (deps.remote ? undefined : ''),
               parentId: parent!.value || null,
-              layoutId: layout!.value || null,
-              values: { 'seo.title': seoTitle!.value.trim(), 'seo.description': seoDescription!.value.trim(), in_menu: inMenu!.checked ? true : null },
+              ...(layout ? { layoutId: layout.value || null } : {}),
+              values: {
+                'seo.title': seoTitle!.value.trim(),
+                'seo.description': seoDescription!.value.trim(),
+                in_menu: inMenu!.checked ? true : null,
+                ...extra.values,
+              },
             }
-          : {}),
+          : Object.keys(extra.values).length
+            ? { values: extra.values }
+            : {}),
       });
+      for (const s of sections) await s.save?.(next || rec);
       editor.Modal.close();
     } catch (e) {
       showErr(msg, e);
@@ -103,7 +165,7 @@ export async function openPropertiesModal(editor: Editor, remote: RemoteEditor, 
         void save();
       },
     },
-    ...fields,
+    ...tabbed(t, fields, sections),
     msg,
     h('button', { class: 'gjsp-primary', type: 'submit', 'data-role': 'save' }, t('save')),
     closeBtn(editor, t)
@@ -112,6 +174,70 @@ export async function openPropertiesModal(editor: Editor, remote: RemoteEditor, 
   // for a list of its controls and would insert them one by one.
   editor.Modal.open({ title: `${t('properties')}: ${rec.name}`, content: h('div', {}, content) });
   return content;
+}
+
+/**
+ * The "new page" dialog: name, parent and the sections of other plugins
+ * (e.g. grapesjs-storage's template). Resolves to the new record, or null
+ * when closed.
+ */
+export function openCreatePageModal(
+  editor: Editor,
+  t: Translator,
+  o: {
+    all: PageRecord[];
+    name: string;
+    parentId?: string | null;
+    sections: RecordFormSection[];
+    create(init: { name: string; parentId: string | null; values: Record<string, unknown> }): Promise<PageRecord>;
+  }
+): Promise<PageRecord | null> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v: PageRecord | null): void => {
+      if (done) return;
+      done = true;
+      resolve(v);
+    };
+    const name = h('input', { class: 'gjsp-input', type: 'text', name: 'name', value: o.name });
+    const pages = o.all.filter((r) => !r.deleted && (r.kind || 'page') === 'page' && !r.templateId && !r.dataOf);
+    const parent = h('select', { class: 'gjsp-select', name: 'parent' }, ...options(t, pages, o.parentId ?? null));
+    const msg = errBox();
+    const submit = async (): Promise<void> => {
+      try {
+        const extra = await runSections(o.sections);
+        if (extra.error) return showErr(msg, new Error(extra.error));
+        const rec = await o.create({ name: name.value.trim() || o.name, parentId: parent.value || null, values: extra.values });
+        for (const s of o.sections) await s.save?.(rec);
+        finish(rec);
+        editor.Modal.close();
+      } catch (e) {
+        showErr(msg, e);
+      }
+    };
+    const content = h(
+      'form',
+      {
+        class: 'gjsp-modal gjsp-create',
+        onsubmit: (e: Event) => {
+          e.preventDefault();
+          void submit();
+        },
+      },
+      h('label', {}, t('promptName'), name),
+      pages.length ? h('label', {}, t('parent'), parent) : null,
+      ...o.sections.map((s) => h('div', { class: 'gjsp-section-form', 'data-section': s.id }, s.el)),
+      msg,
+      h('button', { class: 'gjsp-primary', type: 'submit', 'data-role': 'create' }, t('createComponent')),
+      closeBtn(editor, t)
+    );
+    editor.Modal.open({ title: t('newPage'), content: h('div', {}, content) });
+    (editor.Modal as any).onceClose?.(() => finish(null));
+    setTimeout(() => {
+      name.focus();
+      name.select();
+    });
+  });
 }
 
 /** The record's published revisions, newest first, each with Restore. */

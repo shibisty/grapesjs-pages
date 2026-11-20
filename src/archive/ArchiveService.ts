@@ -64,7 +64,8 @@ async function toBytes(input: Blob | ArrayBuffer | Uint8Array): Promise<Uint8Arr
 }
 
 /** Records an archive holds: designs, not entries. */
-const exportable = (r: PageRecord): boolean => !r.deleted && !(kindOf(r) === 'page' && r.templateId);
+// Entries and data records have no design of their own (their values live in grapesjs-storage).
+const exportable = (r: PageRecord): boolean => !r.deleted && !(kindOf(r) === 'page' && (r.templateId || r.dataOf));
 
 /**
  * Export and import of the whole site as a ZIP (`format.ts`). Works in

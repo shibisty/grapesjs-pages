@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'להתחיל מ־',
   emptyComponent: 'ריק',
   createComponent: 'יצירה',
+  general: 'כללי',
+  dataOf: 'נתונים של %s',
+  breadcrumbs: 'פירורי לחם',
 };
 
 export default messages;

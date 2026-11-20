@@ -141,17 +141,26 @@ describe('page list', () => {
     expect(names()).toEqual(['Page 1', 'Page 2']);
   });
 
-  it('rename asks with prompt, delete asks with confirm', async () => {
+  it('✎ opens the properties (name, address, parent), delete asks with confirm', async () => {
     const s = await createEditor();
     editor = s.editor;
     await s.api.create({ name: 'B' });
     await tick();
-    vi.spyOn(window, 'prompt').mockReturnValue('Contacts');
     click(rows()[1].querySelectorAll('.gjsp-act')[0]);
+    await tick(5);
+    const form = document.querySelector<HTMLFormElement>('.gjsp-props')!;
+    expect(form).toBeTruthy();
+    form.querySelector<HTMLInputElement>('input[name="name"]')!.value = 'Contacts';
+    form.querySelector<HTMLInputElement>('input[name="slug"]')!.value = 'Contacts Us';
+    form.querySelector<HTMLSelectElement>('select[name="parent"]')!.value = (await s.api.list())[0].id;
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
     await settle(s.api);
     await tick();
+    const b = (await s.api.list()).find((r) => r.name === 'Contacts')!;
+    expect(b).toMatchObject({ slug: '/contacts-us', parentId: (await s.api.list())[0].id });
+    // a child now: shown under its parent
     expect(names()).toEqual(['Page 1', 'Contacts']);
-    expect(window.prompt).toHaveBeenCalledWith('Page name', 'B');
+    expect(rows()[1].style.paddingInlineStart).toBe('24px');
 
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     click(rows()[1].querySelectorAll('.gjsp-act')[2]);

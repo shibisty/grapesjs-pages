@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'البدء من',
   emptyComponent: 'فارغ',
   createComponent: 'إنشاء',
+  general: 'عام',
+  dataOf: 'بيانات %s',
+  breadcrumbs: 'مسار التنقل',
 };
 
 export default messages;

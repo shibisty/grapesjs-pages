@@ -4,7 +4,9 @@
 
 A GrapesJS plugin that turns the editor into a small multi-page site editor:
 
-- **Pages sidebar** — create, rename, duplicate, delete and switch pages; a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
+- **Pages sidebar** — a page tree in both modes: create, edit the properties (name, address, parent, SEO), duplicate, delete and switch pages, drag them into place; a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
+- **Breadcrumbs** — a block that draws the path of the open page in the tree (in the canvas and in the published HTML).
+- **Data records** (with [grapesjs-storage](https://www.npmjs.com/package/grapesjs-storage)) — a page picks a storage template; records under it show its design with their own data.
 - **Local storage** — every page is kept in IndexedDB (or any custom `PageStore`) and autosaved.
 - **Per-page undo/redo** — `Ctrl+Z` / `Ctrl+Y` (`Ctrl+Shift+Z`) work on the history of the page you are on.
 - **Copy/paste between pages** — `Ctrl+C` / `Ctrl+V` copy whole components *with their styles* from one page to another.
@@ -185,6 +187,40 @@ const off = pages.components.addSource({
 await pages.components.create('Card', { source: 'blueprints', item: 'card' });
 ```
 
+### Sections of the page dialogs
+
+The *New page* and *Properties* dialogs take parts from other plugins through
+`pages-manager:record-form` (payload `{ mode: 'create' | 'edit', record, sections }`).
+A section is `{ id, label, el, tab?, values?(), validate?(), save?(record) }`: `values()` are
+merged into the record's `values`, `validate()` may return a message that stops the save,
+`save(record)` runs after the record was created or saved. With `tab: true` it is a tab of the
+properties dialog. On create the dialog is shown only when a plugin added a section; otherwise
+**+** makes the page right away. grapesjs-storage adds its template choice and the *Data* tab.
+
+### Data records
+
+A page with `dataOf` set is a data record of that page: it has no design of its own (`data` is
+`null`). It opens with the design of that page (followed through data records), and design edits
+made while it is open are saved to that page — one design, many records. Its own content is its
+data (grapesjs-storage). Deleting a page deletes its data records. They are left out of site
+archives and of the v1 sync; in remote mode `dataOf` travels as `data_of`.
+
+```js
+await editor.PagesManager.create({ name: 'News 1', parentId: newsId, dataOf: newsId });
+await editor.PagesManager.designOf(id);   // the record whose design it shows
+await editor.PagesManager.pathOf(id);     // the page and its ancestors, root first
+```
+
+### Breadcrumbs
+
+The *Breadcrumbs* block (`page-breadcrumbs`) is a `<nav class="gjsp-breadcrumbs">` with the path
+of the open page: ancestors link to their address (`#` without one), the page itself is the last
+item (`aria-current="page"`). Its content is not stored — it is drawn from the tree on every open
+and change, and `getHtml()` (so a publish) has the trail of the page being published. Style it with
+your own rules for `.gjsp-breadcrumbs`.
+
+### Buttons on records
+
 Buttons on records in the sidebar come from the
 `pages-manager:record-actions` event; push `{ id, label, icon?, run(record) }`
 into `actions`:
@@ -252,7 +288,7 @@ How it works:
 ```ts
 list(): Promise<PageRecord[]>             // live pages, oldest first
 open(id, { force?, skipFlush? })
-create({ name?, data? }): Promise<PageRecord>
+create({ name?, data?, kind?, slug?, parentId?, layoutId?, position?, dataOf?, values? }): Promise<PageRecord>
 duplicate(id)
 rename(id, name?)                         // without a name: window.prompt
 remove(id, { confirm? = true })           // window.confirm unless confirm: false
@@ -266,11 +302,13 @@ getSettings() / setSettings({ url?, token? })
 whenReady(): Promise<void>
 store: PageStore
 syncService: SyncService                  // plan() / apply(plan) without the dialog
+update(id, { name?, slug?, parentId?, layoutId?, position?, values? })   // values: null deletes a key
+move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what drag and drop does
+designOf(id): Promise<PageRecord | undefined>   // a data record: its page
+pathOf(id): Promise<PageRecord[]>               // root first
 
 // remote mode (they reject in local mode)
 isRemote(): boolean
-create({ name?, data?, kind?, slug?, parentId?, layoutId?, position? })
-update(id, { name?, slug?, parentId?, layoutId?, position?, values? })   // values: null deletes a key
 publish(id = active): Promise<PageRecord>
 unpublish(id)
 revisions(id): Promise<Revision[]>
@@ -278,7 +316,6 @@ restore(id, revision)                     // into the draft, reopened
 refresh()                                 // read the server's lists now
 resolve(id, 'local' | 'remote' | 'both')
 importLocal(): Promise<number>
-move(id, targetId, 'before' | 'inside' | 'after'): Promise<number>   // what drag and drop does
 
 // site archive (both modes)
 exportArchive({ html? = true, onProgress? }): Promise<Uint8Array>   // the ZIP
@@ -311,6 +348,8 @@ components.isInstance(component): boolean
 | `exported` | `pages-manager:exported` | `{ bytes }` |
 | `imported` | `pages-manager:imported` | `ImportReport` |
 | `components` | `pages-manager:components` | `Master[]` — the list of components changed |
+| `recordActions` | `pages-manager:record-actions` | `{ record, actions }` — push buttons of a sidebar row |
+| `recordForm` | `pages-manager:record-form` | `{ mode, record, parentId?, sections }` — push dialog sections |
 
 ### Commands
 

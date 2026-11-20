@@ -77,7 +77,8 @@ export class SyncService {
   async plan(): Promise<SyncPlanItem[]> {
     await this.manager.flush();
     const listing = await this.client.listPages();
-    return buildPlan(await this.store.all(), listing);
+    // Data records have no project to send (v1 servers keep whole projects).
+    return buildPlan((await this.store.all()).filter((r) => !r.dataOf), listing);
   }
 
   /** Runs the enabled items one by one; errors do not stop the run. */

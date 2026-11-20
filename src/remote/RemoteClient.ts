@@ -20,6 +20,8 @@ export interface WireRecord {
   published_at?: string | null;
   layout_id?: string | null;
   template_id?: string | null;
+  /** A data record of that page (grapesjs-storage): no design of its own. */
+  data_of?: string | null;
   parent_id?: string | null;
   position?: number;
   fields?: unknown[];
@@ -36,6 +38,7 @@ export interface WireWrite {
   parent_id?: string;
   layout_id?: string;
   position?: number;
+  data_of?: string;
   values?: Record<string, unknown>;
   settings?: Record<string, unknown>;
 }
@@ -87,6 +90,7 @@ export function fromWire(w: WireRecord, kind: RecordKind, base?: PageRecord): Pa
     rec.parentId = w.parent_id ?? null;
     rec.layoutId = w.layout_id ?? null;
     rec.templateId = w.template_id ?? null;
+    rec.dataOf = w.data_of ?? null;
     rec.position = w.position ?? 0;
     rec.status = w.status ?? base?.status ?? 'draft';
     rec.publishedAt = w.published_at ?? base?.publishedAt ?? null;
@@ -106,6 +110,7 @@ export function toWire(rec: PageRecord, withData: boolean): WireWrite {
     w.parent_id = rec.parentId || '';
     w.layout_id = rec.layoutId || '';
     w.position = rec.position ?? 0;
+    if (rec.dataOf) w.data_of = rec.dataOf;
     const keys = rec.dirtyValues || [];
     if (keys.length) {
       w.values = {};

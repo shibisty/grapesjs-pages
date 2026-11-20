@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Beginnen mit',
   emptyComponent: 'Leer',
   createComponent: 'Erstellen',
+  general: 'Allgemein',
+  dataOf: 'Daten von %s',
+  breadcrumbs: 'Brotkrümelnavigation',
 };
 
 export default messages;

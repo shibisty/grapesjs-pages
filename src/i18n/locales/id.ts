@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Mulai dari',
   emptyComponent: 'Kosong',
   createComponent: 'Buat',
+  general: 'Umum',
+  dataOf: 'Data %s',
+  breadcrumbs: 'Remah roti',
 };
 
 export default messages;

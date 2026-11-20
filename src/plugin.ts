@@ -13,14 +13,15 @@ import { registerSlot, toggleSlotBlock } from './remote/slot';
 import { IndexedDbPageStore } from './store/IndexedDbPageStore';
 import type { PageStore } from './store/types';
 import { SyncService } from './sync/SyncService';
-import type { PageRecord, PagesManagerApi, PagesOptions, RecordKind } from './types';
+import type { PageRecord, PagesManagerApi, PagesOptions, RecordKind, RecordPatch } from './types';
 import { fmt, report } from './utils';
 import { h, PAGE_ICON_HTML, pageIcon } from './ui/dom';
 import { findHostPanel, findSidebarHost } from './ui/host';
 import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/modals';
-import { openConflictModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
+import { BREADCRUMBS_TYPE, registerBreadcrumbs } from './components/breadcrumbs';
+import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
 import { Sidebar } from './ui/Sidebar';
-import { type DropWhere, moveInTree } from './ui/tree';
+import { createdOrder, type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
 import { connectWorkspace } from './integration/workspace';
 import { ArchiveService, type ExportOptions, type ImportOptions, type ImportReport } from './archive/ArchiveService';
@@ -182,11 +183,53 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
 
   /** Moves a page before, after or inside another one; resolves to how many pages changed. */
   const movePage = async (id: string, targetId: string, where: DropWhere): Promise<number> => {
-    const r = needRemote();
     const pages = (await manager.list()).filter((p) => (p.kind || 'page') === 'page' && !p.templateId);
-    const changes = moveInTree(pages, id, targetId, where);
-    for (const c of changes) await r.update(c.id, { parentId: c.parentId, position: c.position });
+    const changes = moveInTree(pages, id, targetId, where, remote ? undefined : createdOrder);
+    for (const c of changes) await update(c.id, { parentId: c.parentId, position: c.position });
     return changes.length;
+  };
+
+  /** Header fields in either mode. */
+  const update = (id: string, patch: RecordPatch): Promise<PageRecord | undefined> =>
+    remote ? remote.update(id, patch) : manager.updateMeta(id, patch);
+
+  /** The page and its ancestors, root first. */
+  const pathOf = async (id: string): Promise<PageRecord[]> => {
+    const all = await manager.list();
+    const byId = new Map(all.map((r) => [r.id, r]));
+    const out: PageRecord[] = [];
+    let cur = byId.get(id);
+    while (cur && out.length < 32 && !out.includes(cur)) {
+      out.unshift(cur);
+      cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+    }
+    return out;
+  };
+
+  const propsDeps = { store, update, remote: !!remote };
+  const openProperties = (id: string): void => void openPropertiesModal(editor, propsDeps, t, id).catch(report);
+
+  /**
+   * A new page. When other plugins add sections to the dialog (e.g.
+   * grapesjs-storage's template), the "new page" dialog asks first;
+   * otherwise the page is made right away.
+   */
+  const createPage = async (parentId: string | null = null): Promise<PageRecord | null> => {
+    const sections = formSections(editor, { mode: 'create', record: null, parentId });
+    const base = remote ? { kind: 'page' as const } : {};
+    if (!sections.length) {
+      if (!remote) return manager.create(parentId ? { parentId } : {});
+      const n = (await manager.list()).filter((r) => (r.kind || 'page') === 'page').length + 1;
+      return manager.create({ ...base, name: `${t('defaultName')} ${n}`, ...(parentId ? { parentId } : {}) });
+    }
+    return openCreatePageModal(editor, t, {
+      all: await manager.list(),
+      name: await manager.nextName(),
+      parentId,
+      sections,
+      create: ({ name, parentId: p, values }) =>
+        manager.create({ ...base, name, ...(p ? { parentId: p } : {}), ...(Object.keys(values).length ? { values } : {}) }),
+    });
   };
 
   /**
@@ -211,6 +254,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
         return res ? components.create(res.name, res.from) : null;
       }
     }
+    if (kind === 'page') return createPage();
     return manager.create({ kind, name });
   };
 
@@ -296,7 +340,9 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     store,
     syncService: sync,
     isRemote: () => !!remote,
-    update: (id, patch) => needRemote().update(id, patch),
+    update: (id, patch) => update(id, patch),
+    designOf: async (id) => manager.designOwner(await store.get(id)),
+    pathOf: (id) => pathOf(id),
     publish: (id) => publish(id),
     unpublish: (id) => needRemote().unpublish(id),
     revisions: (id) => needRemote().revisions(id),
@@ -403,9 +449,28 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   editor.Commands.add(COMMANDS.properties, {
     run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
       const id = o.id || manager.activeId;
-      if (remote && id) void openPropertiesModal(editor, remote, t, id).catch(report);
+      if (id) openProperties(id);
     },
   });
+
+  // Breadcrumbs: drawn from the path of the open record in the page tree.
+  let crumbPath: PageRecord[] = [];
+  const crumbs = registerBreadcrumbs(editor, { path: () => crumbPath, label: () => t('breadcrumbs'), category: () => t('pages') });
+  const refreshCrumbs = (): void => {
+    const id = manager.activeId;
+    void (id ? pathOf(id) : Promise.resolve([] as PageRecord[]))
+      .then((p) => {
+        const key = (x: PageRecord[]) => x.map((r) => `${r.id}\u0000${r.name}\u0000${r.slug || ''}`).join('|');
+        if (key(p) === key(crumbPath)) return;
+        crumbPath = p;
+        crumbs.refresh();
+      })
+      .catch(report);
+  };
+  on(EVENTS.open, refreshCrumbs);
+  on(EVENTS.change, refreshCrumbs);
+  on('component:add', (c: any) => c?.get?.('type') === BREADCRUMBS_TYPE && setTimeout(() => crumbs.refresh()));
+  offs.push(() => crumbs.destroy());
 
   // Layouts mark where the page goes; the block is offered while one is open.
   registerSlot(editor, opts.slotTag, () => t('slotLabel'));
@@ -493,7 +558,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     if (opts.injectCss) injectCss();
     sidebar = new Sidebar(editor, manager, sync, t, {
       open: (id) => void manager.open(id).catch(report),
-      create: () => void manager.create().catch(report),
+      create: () => void createPage().catch(report),
       rename: (id) => void rename(id).catch(report),
       duplicate: (id) => void manager.duplicate(id).catch(report),
       remove: (id) => void remove(id).catch(report),
@@ -503,7 +568,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       settings: () => void openSettingsModal(editor, sync, t),
       close: () => editor.stopCommand(COMMANDS.open),
       createKind: (kind) => void createKind(kind).catch(report),
-      properties: (id) => remote && void openPropertiesModal(editor, remote, t, id).catch(report),
+      properties: (id) => openProperties(id),
       publish: () => void publish().catch(report),
       revisions: (id) => remote && void openRevisionsModal(editor, remote, t, id).catch(report),
       resolve: (id) => remote && void openConflictModal(editor, remote, t, id).catch(report),

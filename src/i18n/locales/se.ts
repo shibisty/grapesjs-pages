@@ -126,6 +126,9 @@ const messages: PagesLabels = {
   startFrom: 'Börja från',
   emptyComponent: 'Tom',
   createComponent: 'Skapa',
+  general: 'Allmänt',
+  dataOf: 'Data för %s',
+  breadcrumbs: 'Brödsmulor',
 };
 
 export default messages;

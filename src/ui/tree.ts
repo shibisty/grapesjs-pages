@@ -25,7 +25,12 @@ export const siblingOrder = (a: PageRecord, b: PageRecord): number =>
 const parentOf = (p: PageRecord, ids: Set<string>): string | null =>
   p.parentId && ids.has(p.parentId) && p.parentId !== p.id ? p.parentId : null;
 
-function childrenMap(pages: PageRecord[]): Map<string | null, PageRecord[]> {
+/** Local mode: position, then the order they were made in (local pages often have no positions). */
+export const createdOrder = (a: PageRecord, b: PageRecord): number => (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
+
+export type SiblingOrder = (a: PageRecord, b: PageRecord) => number;
+
+function childrenMap(pages: PageRecord[], order: SiblingOrder = siblingOrder): Map<string | null, PageRecord[]> {
   const ids = new Set(pages.map((p) => p.id));
   const kids = new Map<string | null, PageRecord[]>();
   pages.forEach((p) => {
@@ -33,7 +38,7 @@ function childrenMap(pages: PageRecord[]): Map<string | null, PageRecord[]> {
     if (!kids.has(parent)) kids.set(parent, []);
     kids.get(parent)!.push(p);
   });
-  kids.forEach((list) => list.sort(siblingOrder));
+  kids.forEach((list) => list.sort(order));
   return kids;
 }
 
@@ -42,8 +47,8 @@ function childrenMap(pages: PageRecord[]): Map<string | null, PageRecord[]> {
  * home page, name) with their depth. Children of `collapsed` pages are
  * left out; pages caught in a parent cycle come last, at the top level.
  */
-export function pageTree(pages: PageRecord[], collapsed: ReadonlySet<string> = new Set()): TreeRow[] {
-  const kids = childrenMap(pages);
+export function pageTree(pages: PageRecord[], collapsed: ReadonlySet<string> = new Set(), order: SiblingOrder = siblingOrder): TreeRow[] {
+  const kids = childrenMap(pages, order);
   const out: TreeRow[] = [];
   const seen = new Set<string>();
   const walk = (parent: string | null, depth: number, hidden: boolean): void => {
@@ -80,13 +85,13 @@ export function subtree(pages: PageRecord[], id: string): Set<string> {
  * parent or position actually changes). Empty when the move is not
  * possible (onto itself, into its own subtree, an unknown page).
  */
-export function moveInTree(pages: PageRecord[], id: string, targetId: string, where: DropWhere): TreeMove[] {
+export function moveInTree(pages: PageRecord[], id: string, targetId: string, where: DropWhere, order: SiblingOrder = siblingOrder): TreeMove[] {
   const ids = new Set(pages.map((p) => p.id));
   const moving = pages.find((p) => p.id === id);
   const target = pages.find((p) => p.id === targetId);
   if (!moving || !target || id === targetId || subtree(pages, id).has(targetId)) return [];
   const parent = where === 'inside' ? targetId : parentOf(target, ids);
-  const siblings = (childrenMap(pages).get(parent) || []).filter((p) => p.id !== id);
+  const siblings = (childrenMap(pages, order).get(parent) || []).filter((p) => p.id !== id);
   let at = siblings.length;
   if (where !== 'inside') {
     const i = siblings.findIndex((p) => p.id === targetId);
@@ -107,12 +112,17 @@ export function moveInTree(pages: PageRecord[], id: string, targetId: string, wh
  * sibling, Alt+→ makes it the last child of the previous sibling, Alt+←
  * puts it after its parent. Null when there is nowhere to go.
  */
-export function keyboardMove(pages: PageRecord[], id: string, key: 'up' | 'down' | 'in' | 'out'): { targetId: string; where: DropWhere } | null {
+export function keyboardMove(
+  pages: PageRecord[],
+  id: string,
+  key: 'up' | 'down' | 'in' | 'out',
+  order: SiblingOrder = siblingOrder
+): { targetId: string; where: DropWhere } | null {
   const ids = new Set(pages.map((p) => p.id));
   const me = pages.find((p) => p.id === id);
   if (!me) return null;
   const parent = parentOf(me, ids);
-  const siblings = childrenMap(pages).get(parent) || [];
+  const siblings = childrenMap(pages, order).get(parent) || [];
   const i = siblings.findIndex((p) => p.id === id);
   switch (key) {
     case 'up':

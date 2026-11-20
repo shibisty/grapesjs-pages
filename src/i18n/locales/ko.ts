@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: '시작 기준',
   emptyComponent: '비어 있음',
   createComponent: '만들기',
+  general: '일반',
+  dataOf: '%s 데이터',
+  breadcrumbs: '이동 경로',
 };
 
 export default messages;

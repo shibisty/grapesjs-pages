@@ -35,6 +35,11 @@ export const EVENTS = {
    * into `actions` to add a button to it. Payload: `{ record, actions }`.
    */
   recordActions: 'pages-manager:record-actions',
+  /**
+   * Asked when the "new page" or "properties" dialog opens: push a
+   * `RecordFormSection` into `sections`. Payload: `RecordFormRequest`.
+   */
+  recordForm: 'pages-manager:record-form',
   /** A shared project key got a new value (`shared.register`). Payload: `{ key, value }`. */
   shared: 'pages-manager:shared',
 } as const;

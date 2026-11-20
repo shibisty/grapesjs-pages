@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'Començar des de',
   emptyComponent: 'Buit',
   createComponent: 'Crea',
+  general: 'Dades generals',
+  dataOf: 'Dades de %s',
+  breadcrumbs: 'Fil d’Ariadna',
 };
 
 export default messages;

@@ -62,6 +62,13 @@ export const CSS = `
 .gjsp-item.has-conflict .gjsp-sub{color:#ffb74d;opacity:.9}
 .gjsp-import{padding:10px}
 .gjsp-check{display:flex;align-items:center;gap:6px;margin:4px 0 10px}
+.gjsp-tabs{display:flex;gap:2px;margin:0 0 12px;border-bottom:1px solid rgba(255,255,255,.15)}
+.gjsp-tab{background:none;border:0;border-bottom:2px solid transparent;color:inherit;opacity:.7;cursor:pointer;padding:6px 12px;font:inherit;margin-bottom:-1px}
+.gjsp-tab:hover{opacity:1}
+.gjsp-tab.is-active{opacity:1;border-bottom-color:var(--gjs-quaternary-color,#d278c9)}
+.gjsp-tab-pane[hidden]{display:none}
+.gjsp-item.is-data .gjsp-name{opacity:.9}
+.gjsp-data-icon{opacity:.6}
 .gjsp-choices{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .gjsp-choices button{text-align:start}
 .gjsp-select{width:100%;box-sizing:border-box;padding:6px 8px;margin:4px 0 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:3px}

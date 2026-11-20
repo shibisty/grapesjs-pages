@@ -125,6 +125,9 @@ const messages: PagesLabels = {
   startFrom: 'شروع از',
   emptyComponent: 'خالی',
   createComponent: 'ایجاد',
+  general: 'عمومی',
+  dataOf: 'داده‌های %s',
+  breadcrumbs: 'مسیر راهنما',
 };
 
 export default messages;
