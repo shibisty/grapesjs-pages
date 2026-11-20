@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'S’ha desat el component «%s»',
   editingComponent: 'Component «%s»: els canvis s’apliquen a totes les pàgines',
   backTo: '← Torna a «%s»',
+  startFrom: 'Començar des de',
+  emptyComponent: 'Buit',
+  createComponent: 'Crea',
 };
 
 export default messages;

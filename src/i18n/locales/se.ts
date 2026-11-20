@@ -123,6 +123,9 @@ const messages: PagesLabels = {
   componentSaved: 'Komponenten ”%s” har sparats',
   editingComponent: 'Komponent ”%s”: ändringarna gäller på alla sidor',
   backTo: '← Tillbaka till ”%s”',
+  startFrom: 'Börja från',
+  emptyComponent: 'Tom',
+  createComponent: 'Skapa',
 };
 
 export default messages;

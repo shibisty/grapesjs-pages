@@ -1,11 +1,12 @@
 import type { Editor } from 'grapesjs';
 import { ComponentClipboard } from './clipboard/ComponentClipboard';
 import { isEditorAlive, PagesManager } from './core/PagesManager';
+import { SiteSharedBackend } from './core/SharedData';
 import { COMMANDS, EVENTS } from './events';
 import { createTranslator, registerMessages } from './i18n';
 import { resolveOptions } from './options';
-import { RemoteClient } from './remote/RemoteClient';
-import { RemoteEditor } from './remote/RemoteEditor';
+import { RemoteClient, SITE_ID } from './remote/RemoteClient';
+import { type MarkupHook, RemoteEditor } from './remote/RemoteEditor';
 import { RemotePageStore } from './remote/RemotePageStore';
 import { registerSlot, toggleSlotBlock } from './remote/slot';
 import { IndexedDbPageStore } from './store/IndexedDbPageStore';
@@ -15,7 +16,7 @@ import type { PageRecord, PagesManagerApi, PagesOptions, RecordKind } from './ty
 import { fmt, report } from './utils';
 import { h, PAGE_ICON_HTML, pageIcon } from './ui/dom';
 import { findHostPanel, findSidebarHost } from './ui/host';
-import { openSettingsModal, openSyncModal } from './ui/modals';
+import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/modals';
 import { openConflictModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
 import { Sidebar } from './ui/Sidebar';
 import { type DropWhere, moveInTree } from './ui/tree';
@@ -72,11 +73,15 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
       {
         onChange: () => {
           if (!isEditorAlive(editor)) return;
+          // A first refresh brings the site record (with the shared keys) after the start.
+          void manager.reloadShared().catch(report);
           editor.trigger(EVENTS.change);
           editor.trigger(EVENTS.remote, rstore!.state);
         },
         onRemote: (rec) => {
           if (rec.id === manager.activeId) void manager.replaceRecord(rec).catch(report);
+          // The site carries the shared project keys: another editor may have changed them.
+          if (rec.id === SITE_ID) void manager.reloadShared().catch(report);
         },
         onRemoved: (id) => void forget(id).catch(report),
         onConflict: (rec) => isEditorAlive(editor) && editor.trigger(EVENTS.conflict, rec),
@@ -88,6 +93,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     store = opts.store || new IndexedDbPageStore(opts.dbName);
   }
   const manager = new PagesManager(editor, store, opts, t);
+  if (rstore) manager.setSharedBackend(new SiteSharedBackend(rstore, SITE_ID));
   const remote = rstore
     ? new RemoteEditor(editor, manager, rstore, t, () => new IndexedDbPageStore(opts.dbName), opts.remote?.markup || null)
     : null;
@@ -181,14 +187,29 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     return changes.length;
   };
 
-  /** A new page, layout, template or component, named "<Kind> <n>". */
-  const createKind = async (kind: RecordKind): Promise<PageRecord> => {
+  /**
+   * A new page, layout, template or component, named "<Kind> <n>". A
+   * component asks what it starts from when other plugins offer sources
+   * (`components.addSource`); null when that dialog is closed.
+   */
+  const createKind = async (kind: RecordKind): Promise<PageRecord | null> => {
     const base =
       kind === 'layout' ? t('layout') : kind === 'template' ? t('newTemplate') : kind === 'component' ? t('componentName') : t('defaultName');
     const taken = new Set((await manager.list()).map((r) => r.name));
     let n = (await manager.list()).filter((r) => (r.kind || 'page') === kind).length + 1;
     while (taken.has(`${base} ${n}`)) n++;
-    return manager.create({ kind, name: `${base} ${n}` });
+    const name = `${base} ${n}`;
+    if (kind === 'component') {
+      const sources = components
+        .sources()
+        .map((s) => ({ id: s.id, label: s.label, items: s.list() }))
+        .filter((s) => s.items.length);
+      if (sources.length) {
+        const res = await openComponentFromModal(editor, t, sources, name);
+        return res ? components.create(res.name, res.from) : null;
+      }
+    }
+    return manager.create({ kind, name });
   };
 
   const importLocal = async (): Promise<number> => {
@@ -200,7 +221,9 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
 
   /* ---------------- site archive ---------------- */
 
-  const archive = new ArchiveService(editor, manager, store, remote);
+  // Publish hooks of other plugins (`hooks.onPublish`): remote publishes and archive markup in both modes.
+  const markupHooks: MarkupHook[] = remote ? remote.markupHooks : [];
+  const archive = new ArchiveService(editor, manager, store, remote, markupHooks);
 
   const exportArchive = async (o?: ExportOptions): Promise<Uint8Array> => {
     const bytes = await archive.exportBytes(o);
@@ -284,6 +307,23 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     downloadArchive: (o) => downloadArchive(o),
     importArchive: (f, o) => importArchive(f, o),
     components,
+    shared: {
+      register: (key) => manager.shareKey(key),
+      keys: () => manager.sharedKeysList(),
+      get: (key) => manager.getShared(key),
+      set: (key, value) => manager.setShared(key, value),
+    },
+    hooks: {
+      onLoad: (fn) => manager.addLoadHook(fn),
+      onSave: (fn) => manager.addSaveHook(fn),
+      onPublish: (fn) => {
+        markupHooks.push(fn);
+        return () => {
+          const i = markupHooks.indexOf(fn);
+          if (i >= 0) markupHooks.splice(i, 1);
+        };
+      },
+    },
   };
   ed.PagesManager = api;
 

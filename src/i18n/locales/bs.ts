@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Komponenta „%s“ spremljena',
   editingComponent: 'Komponenta „%s“: promjene se primjenjuju na svim stranicama',
   backTo: '← Nazad na „%s“',
+  startFrom: 'Počni od',
+  emptyComponent: 'Prazno',
+  createComponent: 'Kreiraj',
 };
 
 export default messages;

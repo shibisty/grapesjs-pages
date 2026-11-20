@@ -4,6 +4,7 @@ import type { PageStore } from './store/types';
 import type { SyncService } from './sync/SyncService';
 import type { ExportOptions, ImportOptions, ImportReport } from './archive/ArchiveService';
 import type { ComponentsApi } from './components/ComponentsFeature';
+import type { RecordHook } from './core/PagesManager';
 
 export type { ProjectData };
 
@@ -107,6 +108,15 @@ export interface PublishMarkup {
   /** The record being published (read-only). */
   record: PageRecord;
   kind: RecordKind;
+}
+
+/** A button another plugin adds to a record in the sidebar (`pages-manager:record-actions`). */
+export interface RecordAction {
+  id: string;
+  label: string;
+  /** A short text or symbol shown on the button. */
+  icon?: string;
+  run(record: PageRecord): void;
 }
 
 export interface ServerSettings {
@@ -311,4 +321,31 @@ export interface PagesManagerApi {
   importArchive(file: Blob | ArrayBuffer | Uint8Array, opts?: ImportOptions): Promise<ImportReport>;
   /** Linked components (both modes): list, save the selection as one, edit, detach, insert. */
   components: ComponentsApi;
+
+  /* ---- for other plugins ---- */
+
+  /**
+   * Site-wide project keys. Every record is a whole GrapesJS project, so a
+   * key another plugin keeps in the project data (its storable) would be
+   * copied into each page. A registered key is kept once: taken out of a
+   * record when it is saved, put into every record that is opened. Local
+   * mode: the store's meta area; remote mode: the site record's project.
+   * The first record opened that still has its own copy gives the value
+   * (migration from per-page copies).
+   */
+  shared: {
+    register(key: string): Promise<void>;
+    keys(): string[];
+    get<T = unknown>(key: string): T | undefined;
+    set(key: string, value: unknown): Promise<void>;
+  };
+  /** Hooks on records' projects and on published markup. Each returns its remover. */
+  hooks: {
+    /** Before a record's project is loaded into the editor (add things to it). */
+    onLoad(fn: RecordHook): () => void;
+    /** Before the editor's project is stored as a record (take them out again). */
+    onSave(fn: RecordHook): () => void;
+    /** Changes what a publish (and an archive's `body.html`/`style.css`) gets, after the `remote.markup` option. */
+    onPublish(fn: (out: PublishMarkup) => PublishMarkup | void | Promise<PublishMarkup | void>): () => void;
+  };
 }

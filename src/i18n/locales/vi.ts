@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Đã lưu thành phần “%s”',
   editingComponent: 'Thành phần “%s”: thay đổi sẽ áp dụng trên mọi trang',
   backTo: '← Quay lại “%s”',
+  startFrom: 'Bắt đầu từ',
+  emptyComponent: 'Trống',
+  createComponent: 'Tạo',
 };
 
 export default messages;

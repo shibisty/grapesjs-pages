@@ -153,4 +153,9 @@ export interface PagesLabels {
   editingComponent: string;
   /** %s — page name */
   backTo: string;
+  /* ---- component sources ---- */
+  /** Label of the choice of what a new component starts from */
+  startFrom: string;
+  emptyComponent: string;
+  createComponent: string;
 }

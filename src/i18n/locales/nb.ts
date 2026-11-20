@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Komponenten «%s» er lagret',
   editingComponent: 'Komponent «%s»: endringene gjelder på alle sider',
   backTo: '← Tilbake til «%s»',
+  startFrom: 'Start fra',
+  emptyComponent: 'Tom',
+  createComponent: 'Opprett',
 };
 
 export default messages;

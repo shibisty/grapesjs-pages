@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'کامپوننت «%s» ذخیره شد',
   editingComponent: 'کامپوننت «%s»: تغییرات در همهٔ صفحه‌ها اعمال می‌شود',
   backTo: '← بازگشت به «%s»',
+  startFrom: 'شروع از',
+  emptyComponent: 'خالی',
+  createComponent: 'ایجاد',
 };
 
 export default messages;

@@ -6,6 +6,7 @@ import type { ProjectData, RecordKind } from '../types';
  *
  * ```
  * manifest.json
+ * shared.json           values other plugins keep site-wide (local mode; remote: in the site's project)
  * site/                 project.json, style.css, settings.json
  * components/<name>/    project.json, body.html, style.css, index.html  (linked components)
  * layouts/<name>/       project.json, body.html, style.css, index.html
@@ -77,6 +78,8 @@ export interface ArchiveManifest {
 export interface ReadArchive {
   manifest: ArchiveManifest;
   records: ArchiveRecord[];
+  /** `shared.json`: the shared project keys (`shared.register`), when the archive has them. */
+  shared?: Record<string, unknown>;
   /** Records whose body.html or style.css were edited outside (taken from the HTML). */
   edited: string[];
 }
@@ -174,7 +177,10 @@ function previewDoc(rec: ArchiveRecord, dir: string, layout: ArchiveRecord | und
 const json = (v: unknown): string => JSON.stringify(v, null, 2) + '\n';
 
 /** The archive's files: path → contents. */
-export function archiveFiles(records: ArchiveRecord[], meta: { name?: string; source?: string; generator?: string } = {}): Record<string, string> {
+export function archiveFiles(
+  records: ArchiveRecord[],
+  meta: { name?: string; source?: string; generator?: string; shared?: Record<string, unknown> } = {}
+): Record<string, string> {
   const dirs = recordDirs(records);
   const byId = new Map(records.map((r) => [r.id, r]));
   const files: Record<string, string> = {};
@@ -220,7 +226,8 @@ export function archiveFiles(records: ArchiveRecord[], meta: { name?: string; so
     ...(meta.name ? { name: meta.name } : {}),
     records: entries,
   };
-  return { 'manifest.json': json(manifest), ...files };
+  const shared: Record<string, string> = meta.shared && Object.keys(meta.shared).length ? { 'shared.json': json(meta.shared) } : {};
+  return { 'manifest.json': json(manifest), ...shared, ...files };
 }
 
 /** The archive as ZIP bytes. */
@@ -313,7 +320,9 @@ export function readArchiveFiles(files: Record<string, string>): ReadArchive {
     if (css != null) rec.css = css;
     records.push(rec);
   }
-  return { manifest, records, edited };
+  const sharedRaw = parseJson(files[`${prefix}shared.json`], 'shared.json');
+  const shared = sharedRaw && typeof sharedRaw === 'object' && !Array.isArray(sharedRaw) ? (sharedRaw as Record<string, unknown>) : undefined;
+  return { manifest, records, edited, ...(shared ? { shared } : {}) };
 }
 
 /** Reads ZIP bytes. */

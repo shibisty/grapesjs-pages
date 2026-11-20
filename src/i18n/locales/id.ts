@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Komponen “%s” tersimpan',
   editingComponent: 'Komponen “%s”: perubahan berlaku di semua halaman',
   backTo: '← Kembali ke “%s”',
+  startFrom: 'Mulai dari',
+  emptyComponent: 'Kosong',
+  createComponent: 'Buat',
 };
 
 export default messages;

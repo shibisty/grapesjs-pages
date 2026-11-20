@@ -4,6 +4,7 @@ import type { Translator } from '../i18n';
 import { META, type PageStore } from '../store/types';
 import type { CreateInit, OpenOptions, PageRecord, ProjectData, ResolvedOptions } from '../types';
 import { clone, report, sleep, uid } from '../utils';
+import { MetaSharedBackend, type SharedBackend } from './SharedData';
 import { SnapshotHistory } from './SnapshotHistory';
 
 /** Is the editor still alive? GrapesJS 0.21 sends no `destroy` event. */
@@ -15,6 +16,13 @@ export const isEditorAlive = (editor: Editor): boolean => {
     return false;
   }
 };
+
+/**
+ * A hook of another plugin on the project of a record: on load it may add
+ * to the data (e.g. site-wide CSS rules), on save it takes that out again,
+ * so a record stores only its own content. Must be pure and idempotent.
+ */
+export type RecordHook = (data: ProjectData, rec: PageRecord | undefined) => ProjectData | void | Promise<ProjectData | void>;
 
 export const emptyProject = (): ProjectData =>
   ({
@@ -44,6 +52,13 @@ export class PagesManager {
   private queue: Promise<unknown> = Promise.resolve();
   private readonly readyPromise: Promise<void>;
   private resolveReady!: () => void;
+  private readonly loadHooks: RecordHook[] = [];
+  private readonly saveHooks: RecordHook[] = [];
+  private readonly sharedKeys: string[] = [];
+  /** Shared values as last loaded or saved (JSON, to compare). */
+  private sharedStr: Record<string, string> = {};
+  private sharedVals: Record<string, unknown> = {};
+  private shared: SharedBackend;
 
   constructor(
     private readonly editor: Editor,
@@ -52,6 +67,187 @@ export class PagesManager {
     private readonly t: Translator
   ) {
     this.readyPromise = new Promise((r) => (this.resolveReady = r));
+    this.shared = new MetaSharedBackend(store);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Hooks and shared keys (for other plugins)                          */
+  /* ------------------------------------------------------------------ */
+
+  /** Runs on a record's project before it is loaded; returns the remover. */
+  addLoadHook(fn: RecordHook): () => void {
+    this.loadHooks.push(fn);
+    return () => {
+      const i = this.loadHooks.indexOf(fn);
+      if (i >= 0) this.loadHooks.splice(i, 1);
+    };
+  }
+
+  /** Runs on the editor's project before it is stored as a record; returns the remover. */
+  addSaveHook(fn: RecordHook): () => void {
+    this.saveHooks.push(fn);
+    return () => {
+      const i = this.saveHooks.indexOf(fn);
+      if (i >= 0) this.saveHooks.splice(i, 1);
+    };
+  }
+
+  /** Where the shared keys are kept (remote mode: the site record). */
+  setSharedBackend(b: SharedBackend): void {
+    this.shared = b;
+  }
+
+  sharedKeysList(): string[] {
+    return [...this.sharedKeys];
+  }
+
+  /** The current value of a shared key (a copy), or undefined. */
+  getShared<T = unknown>(key: string): T | undefined {
+    const v = this.sharedVals[key];
+    return v === undefined ? undefined : clone(v as T);
+  }
+
+  /**
+   * Makes a key of the project data site-wide: kept once instead of in
+   * every record, put into whatever record is opened. If it has no shared
+   * value yet, the value in the open record (or the first one opened that
+   * has it) becomes the shared one — the migration from per-page copies.
+   */
+  async shareKey(key: string): Promise<void> {
+    if (!key || this.sharedKeys.includes(key)) return;
+    this.sharedKeys.push(key);
+    const got = await this.shared.load([key]);
+    if (got[key] !== undefined) this.remember(key, got[key]);
+    if (!this.active || !this.alive()) return;
+    // Already open: adopt the editor's value, or give it the shared one.
+    const cur = (this.editor.getProjectData() as Record<string, unknown>)[key];
+    if (this.sharedVals[key] === undefined) {
+      if (cur !== undefined) await this.writeShared({ [key]: cur });
+    } else if (JSON.stringify(cur) !== this.sharedStr[key]) {
+      this.applyStorable(key, this.sharedVals[key]);
+    }
+    const hs = this.hist.get(this.active);
+    if (hs) hs.replaceCurrent(JSON.stringify(await this.finalize(this.editor.getProjectData() as ProjectData, undefined)));
+  }
+
+  /** Sets a shared value from outside (another plugin, an import) and gives it to the open record. */
+  async setShared(key: string, value: unknown): Promise<void> {
+    if (!this.sharedKeys.includes(key)) this.sharedKeys.push(key);
+    if (JSON.stringify(value) === this.sharedStr[key]) return;
+    await this.writeShared({ [key]: value });
+    if (this.active && this.alive()) this.applyStorable(key, value);
+  }
+
+  /**
+   * Writes shared values that came from outside (an archive). `overwrite`
+   * false keeps the keys that have a value here. Keys no plugin registered
+   * are stored too, for when it is installed.
+   */
+  async importShared(values: Record<string, unknown>, overwrite = true): Promise<void> {
+    const cur = await this.shared.load(Object.keys(values));
+    const next: Record<string, unknown> = {};
+    Object.entries(values).forEach(([k, v]) => {
+      if (v !== undefined && (overwrite || cur[k] === undefined)) next[k] = v;
+    });
+    if (!Object.keys(next).length) return;
+    await this.shared.save(next);
+    for (const [k, v] of Object.entries(next)) {
+      if (!this.sharedKeys.includes(k)) continue;
+      this.remember(k, v);
+      if (this.active && this.alive()) this.applyStorable(k, v);
+      this.emit(EVENTS.shared, { key: k, value: clone(v) });
+    }
+  }
+
+  /** Reads the shared values again (e.g. the server sent a new site record). */
+  async reloadShared(): Promise<void> {
+    if (!this.sharedKeys.length) return;
+    const got = await this.shared.load(this.sharedKeys);
+    for (const k of this.sharedKeys) {
+      if (got[k] === undefined || JSON.stringify(got[k]) === this.sharedStr[k]) continue;
+      this.remember(k, got[k]);
+      if (this.active && this.alive()) this.applyStorable(k, got[k]);
+      this.emit(EVENTS.shared, { key: k, value: clone(got[k]) });
+    }
+  }
+
+  private remember(key: string, value: unknown): void {
+    this.sharedVals[key] = clone(value);
+    this.sharedStr[key] = JSON.stringify(value);
+  }
+
+  private async writeShared(values: Record<string, unknown>): Promise<void> {
+    Object.entries(values).forEach(([k, v]) => this.remember(k, v));
+    await this.shared.save(values);
+    Object.entries(values).forEach(([k, v]) => this.emit(EVENTS.shared, { key: k, value: clone(v) }));
+  }
+
+  /** Gives one key to the plugin that owns it, without reloading the whole project. */
+  private applyStorable(key: string, value: unknown): void {
+    const em = this.editor.getModel() as any;
+    const list: any[] = em?.storables || em?.get?.('storables') || [];
+    const owner = list.find((s) => s && (s.storageKey === key || (Array.isArray(s.storageKey) && s.storageKey.includes(key))));
+    if (!owner?.load) return;
+    this.muted = true;
+    try {
+      owner.load({ [key]: clone(value) });
+    } finally {
+      this.muted = false;
+    }
+  }
+
+  /** A record's project as it goes into the editor: hooks, then the shared values. */
+  private async materialize(data: ProjectData, rec: PageRecord | undefined): Promise<ProjectData> {
+    let d = clone(data) as ProjectData;
+    for (const h of this.loadHooks) {
+      try {
+        const r = await h(d, rec);
+        if (r) d = r;
+      } catch (e) {
+        report(e); // a broken plugin must not keep the record from opening
+      }
+    }
+    const adopt: Record<string, unknown> = {};
+    for (const k of this.sharedKeys) {
+      const own = (d as Record<string, unknown>)[k];
+      if (this.sharedVals[k] !== undefined) (d as Record<string, unknown>)[k] = clone(this.sharedVals[k]);
+      else if (own !== undefined) adopt[k] = own; // first record with a per-page copy
+    }
+    if (Object.keys(adopt).length) await this.writeShared(adopt);
+    return d;
+  }
+
+  /** The editor's project as a record stores it: no shared keys, save hooks applied. */
+  private async finalize(data: ProjectData, rec: PageRecord | undefined): Promise<ProjectData> {
+    let d = { ...(data as Record<string, unknown>) } as ProjectData;
+    for (const k of this.sharedKeys) delete (d as Record<string, unknown>)[k];
+    for (const h of this.saveHooks) {
+      try {
+        const r = await h(d, rec);
+        if (r) d = r;
+      } catch (e) {
+        report(e);
+      }
+    }
+    return d;
+  }
+
+  /** The shared keys of the editor's project, written if they changed. */
+  private async collectShared(data: ProjectData): Promise<void> {
+    const changed: Record<string, unknown> = {};
+    for (const k of this.sharedKeys) {
+      const v = (data as Record<string, unknown>)[k];
+      if (v !== undefined && JSON.stringify(v) !== this.sharedStr[k]) changed[k] = v;
+    }
+    if (Object.keys(changed).length) await this.writeShared(changed);
+  }
+
+  /** What a record stores: its own content (+ the shared values if it is their owner). */
+  private storedForm(id: string, rest: ProjectData): ProjectData {
+    if (id !== this.shared.ownerId) return rest;
+    const d = { ...(rest as Record<string, unknown>) };
+    for (const k of this.sharedKeys) if (this.sharedVals[k] !== undefined) d[k] = clone(this.sharedVals[k]);
+    return d as ProjectData;
   }
 
   get activeId(): string | null {
@@ -103,12 +299,13 @@ export class PagesManager {
    * (plus `settleMs` for GrapesJS' deferred updates) so loading never looks
    * like a user edit. Returns the editor-normalized data.
    */
-  private async load(data: ProjectData): Promise<{ data: ProjectData; str: string }> {
+  private async load(data: ProjectData, rec: PageRecord | undefined): Promise<{ data: ProjectData; str: string }> {
+    const full = await this.materialize(data, rec);
     this.muted = true;
     try {
-      this.editor.loadProjectData(clone(data));
+      this.editor.loadProjectData(full);
       await sleep(this.opts.settleMs);
-      const d = this.editor.getProjectData() as ProjectData;
+      const d = await this.finalize(this.editor.getProjectData() as ProjectData, rec);
       return { data: d, str: JSON.stringify(d) };
     } finally {
       this.muted = false;
@@ -118,7 +315,7 @@ export class PagesManager {
   private async persist(id: string, data: ProjectData): Promise<void> {
     const rec = await this.store.get(id);
     if (!rec || rec.deleted) return;
-    rec.data = data;
+    rec.data = this.storedForm(id, data);
     rec.updatedAt = Date.now();
     rec.dirty = true;
     await this.store.put(rec);
@@ -128,7 +325,10 @@ export class PagesManager {
   private async commit(): Promise<void> {
     if (this.muted || !this.ready || !this.active || !this.alive()) return;
     const id = this.active;
-    const data = this.editor.getProjectData() as ProjectData;
+    const full = this.editor.getProjectData() as ProjectData;
+    await this.collectShared(full);
+    const data = await this.finalize(full, await this.store.get(id));
+    if (this.active !== id) return; // another record was opened meanwhile
     const hs = this.hist.get(id);
     if (!hs || !hs.push(JSON.stringify(data))) return; // nothing really changed
     await this.persist(id, data);
@@ -193,7 +393,7 @@ export class PagesManager {
     if (!id || !hs) return false;
     const snap = hs.step(dir);
     if (snap == null) return false;
-    const { data, str } = await this.load(JSON.parse(snap));
+    const { data, str } = await this.load(JSON.parse(snap), await this.store.get(id));
     hs.replaceCurrent(str);
     await this.persist(id, data);
     this.emitHistory();
@@ -257,7 +457,7 @@ export class PagesManager {
       }
     }
     if (this.active !== id || !this.alive()) return; // another open() won meanwhile
-    const { str } = await this.load(data);
+    const { str } = await this.load(data, rec);
     const hs = this.hist.get(id);
     if (hs) hs.replaceCurrent(str);
     else this.hist.set(id, new SnapshotHistory(str, this.opts.historyLimit));
@@ -390,8 +590,24 @@ export class PagesManager {
     if (!this.alive()) return;
     // Layouts, templates, the site and entries are not pages: a remote site
     // without pages gets its home page from the editor content too.
+    if (this.sharedKeys.length) {
+      const got = await this.shared.load(this.sharedKeys);
+      Object.entries(got).forEach(([k, v]) => this.remember(k, v));
+    }
     if (!pages.some((p) => (p.kind || 'page') === 'page' && !p.templateId)) {
-      const data = this.editor.getProjectData() as ProjectData;
+      const full = this.editor.getProjectData() as ProjectData;
+      // The editor keeps its content (no load). A shared value that exists
+      // wins (the site's, e.g. from the server); the initial content only
+      // fills keys that have none yet.
+      const adopt: Record<string, unknown> = {};
+      for (const k of this.sharedKeys) {
+        const own = (full as Record<string, unknown>)[k];
+        if (this.sharedVals[k] === undefined) {
+          if (own !== undefined) adopt[k] = own;
+        } else if (JSON.stringify(own) !== this.sharedStr[k]) this.applyStorable(k, this.sharedVals[k]);
+      }
+      if (Object.keys(adopt).length) await this.writeShared(adopt);
+      const data = await this.finalize(full, undefined);
       const rec = this.newRecord(`${this.t('defaultName')} 1`, data, this.opts.remote ? { kind: 'page', slug: '/' } : {});
       await this.store.put(rec);
       this.active = rec.id;

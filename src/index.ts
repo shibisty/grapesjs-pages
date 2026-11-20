@@ -11,6 +11,9 @@ export { IndexedDbPageStore } from './store/IndexedDbPageStore';
 export { MemoryPageStore } from './store/MemoryPageStore';
 export type { PageStore } from './store/types';
 export { PagesManager } from './core/PagesManager';
+export type { RecordHook } from './core/PagesManager';
+export { MetaSharedBackend, SiteSharedBackend, SHARED_META } from './core/SharedData';
+export type { SharedBackend } from './core/SharedData';
 export { SnapshotHistory } from './core/SnapshotHistory';
 export { ComponentClipboard, serializeComponent, remapIds } from './clipboard/ComponentClipboard';
 export { RestClient, HttpError } from './sync/RestClient';
@@ -47,8 +50,9 @@ export {
   safeName,
 } from './archive/format';
 export type { ArchiveRecord, ArchiveManifest, ManifestEntry, ReadArchive } from './archive/format';
-export { canvasMarkup } from './remote/RemoteEditor';
+export { canvasMarkup, runMarkupHooks } from './remote/RemoteEditor';
+export type { MarkupHook } from './remote/RemoteEditor';
 export { ComponentsFeature, BLOCK_CATEGORY, BLOCK_PREFIX, instanceOf } from './components/ComponentsFeature';
-export type { ComponentsApi } from './components/ComponentsFeature';
+export type { ComponentsApi, ComponentSource } from './components/ComponentsFeature';
 export { expandProject, buildInstance, detachJson, INSTANCE_TYPE, INSTANCE_ATTR } from './components/expand';
 export type { Master } from './components/expand';

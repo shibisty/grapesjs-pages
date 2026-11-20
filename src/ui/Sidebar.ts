@@ -4,7 +4,7 @@ import { EVENTS } from '../events';
 import { getLocale, isRtlLocale, type Translator } from '../i18n';
 import type { SyncService } from '../sync/SyncService';
 import type { RemoteEditor } from '../remote/RemoteEditor';
-import type { PageRecord, RecordKind } from '../types';
+import type { PageRecord, RecordAction, RecordKind } from '../types';
 import { fmt, report } from '../utils';
 import { h } from './dom';
 import { type DropWhere, keyboardMove, matches, pageTree, searchTree, subtree } from './tree';
@@ -345,6 +345,11 @@ export class Sidebar {
         'div',
         { class: 'gjsp-acts' },
         r.conflict && a.resolve ? act('⚠', t('resolve'), () => a.resolve!(r.id)) : null,
+        ...this.extraActions(r).map((x) => {
+          const b = act(x.icon || '•', x.label, () => x.run(r));
+          b.dataset.action = x.id;
+          return b;
+        }),
         this.remote && a.properties ? act('✎', t('properties'), () => a.properties!(r.id)) : act('✎', t('rename'), () => a.rename(r.id)),
         r.kind === 'site' ? null : act('⧉', t('duplicate'), () => a.duplicate(r.id)),
         r.kind === 'site' ? null : act('✕', t('remove'), () => a.remove(r.id))
@@ -354,6 +359,17 @@ export class Sidebar {
     if (r.conflict) li.classList.add('has-conflict');
     if (tree && a.move) this.draggable(li, r.id, tree.pages);
     return li;
+  }
+
+  /** Actions other plugins add to a record (`pages-manager:record-actions`). */
+  private extraActions(r: PageRecord): RecordAction[] {
+    const actions: RecordAction[] = [];
+    try {
+      this.editor.trigger(EVENTS.recordActions, { record: { ...r }, actions });
+    } catch (e) {
+      report(e);
+    }
+    return actions.filter((x) => x && typeof x.run === 'function' && x.label);
   }
 
   /** Expands or collapses a page of the tree (kept in the store's meta). */

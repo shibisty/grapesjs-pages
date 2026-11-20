@@ -39,9 +39,30 @@ export function instanceOf(c: Component | null | undefined): Component | null {
 /** A component inside an instance (not the instance itself): read-only content. */
 const insideInstance = (c: Component): boolean => !!c.parent() && !!instanceOf(c.parent());
 
+/**
+ * Where a new component can start from, offered by another plugin
+ * (grapesjs-blueprints: its component types). `build` gives the GrapesJS
+ * component definition the new component holds.
+ */
+export interface ComponentSource {
+  id: string;
+  label: string;
+  list(): Array<{ id: string; name: string }>;
+  build(itemId: string): Json | Json[];
+}
+
 export interface ComponentsApi {
   /** The components (masters), oldest first. */
   list(): Master[];
+  /**
+   * Creates a component: empty, or from a source's item (`{ source, item }`).
+   * Opens it unless `open: false`.
+   */
+  create(name: string, from?: { source: string; item: string } | null, opts?: { open?: boolean }): Promise<PageRecord>;
+  /** Offers another plugin's items as starting points of new components; returns the remover. */
+  addSource(source: ComponentSource): () => void;
+  /** Registered sources. */
+  sources(): ComponentSource[];
   /** Saves a component of the page as a new linked component and puts an instance in its place. */
   save(component?: Component | null, name?: string): Promise<PageRecord | null>;
   /** Opens the component of an instance (or by id) for editing. */
@@ -69,6 +90,7 @@ export class ComponentsFeature implements ComponentsApi {
   private bar: HTMLDivElement | null = null;
   private readonly offs: Array<() => void> = [];
   private reloadQueued = false;
+  private readonly sourceList: ComponentSource[] = [];
 
   constructor(
     private readonly editor: Editor,
@@ -272,6 +294,39 @@ export class ComponentsFeature implements ComponentsApi {
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
+
+  addSource(source: ComponentSource): () => void {
+    const i = this.sourceList.findIndex((s) => s.id === source.id);
+    if (i >= 0) this.sourceList.splice(i, 1, source);
+    else this.sourceList.push(source);
+    return () => {
+      const j = this.sourceList.indexOf(source);
+      if (j >= 0) this.sourceList.splice(j, 1);
+    };
+  }
+
+  sources(): ComponentSource[] {
+    return [...this.sourceList];
+  }
+
+  async create(name: string, from?: { source: string; item: string } | null, opts: { open?: boolean } = {}): Promise<PageRecord> {
+    let content: Json[] = [];
+    if (from) {
+      const src = this.sourceList.find((s) => s.id === from.source);
+      if (!src) throw new Error(`grapesjs-pages: no component source "${from.source}"`);
+      const built = src.build(from.item);
+      content = (Array.isArray(built) ? built : [built]).filter(Boolean);
+    }
+    const title = (name || '').trim() || `${this.t('componentName')} ${this.list().length + 1}`;
+    const rec = this.manager.newRecord(title, componentProject(content, []), { kind: 'component' });
+    await this.manager.add(rec);
+    this.masters.set(rec.id, masterOf(rec));
+    this.order.push(rec.id);
+    this.syncBlocks();
+    this.editor.trigger(EVENTS.components, this.list());
+    if (opts.open !== false) await this.manager.open(rec.id);
+    return rec;
+  }
 
   async save(component?: Component | null, name?: string): Promise<PageRecord | null> {
     const c = component || this.editor.getSelected();

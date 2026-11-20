@@ -20,6 +20,8 @@ export interface CreateOpts {
   config?: Record<string, unknown>;
   /** Don't wait for the plugin to be ready. */
   noWait?: boolean;
+  /** Plugins applied after this one (e.g. one that registers a shared key). */
+  extraPlugins?: Array<(ed: Editor) => void>;
 }
 
 /** A real grapesjs editor in jsdom with the plugin and a fast in-memory store. */
@@ -35,7 +37,7 @@ export async function createEditor(o: CreateOpts = {}): Promise<Setup> {
     telemetry: false,
     components: o.html ?? SAMPLE_HTML,
     style: o.css ?? SAMPLE_CSS,
-    plugins: [(ed: Editor) => pagesPlugin(ed, { settleMs: 0, autosaveDelay: 5, ...o.plugin, store })],
+    plugins: [(ed: Editor) => pagesPlugin(ed, { settleMs: 0, autosaveDelay: 5, ...o.plugin, store }), ...(o.extraPlugins || [])],
     ...o.config,
   } as Parameters<typeof grapesjs.init>[0]);
   const api = getPagesManager(editor)!;

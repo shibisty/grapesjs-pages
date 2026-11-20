@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: '‘%s’ 컴포넌트가 저장됨',
   editingComponent: '‘%s’ 컴포넌트: 변경 사항이 모든 페이지에 적용됩니다',
   backTo: '← ‘%s’(으)로 돌아가기',
+  startFrom: '시작 기준',
+  emptyComponent: '비어 있음',
+  createComponent: '만들기',
 };
 
 export default messages;

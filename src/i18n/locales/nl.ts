@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Component ‘%s’ opgeslagen',
   editingComponent: 'Component ‘%s’: wijzigingen gelden op elke pagina',
   backTo: '← Terug naar ‘%s’',
+  startFrom: 'Beginnen met',
+  emptyComponent: 'Leeg',
+  createComponent: 'Maken',
 };
 
 export default messages;

@@ -124,3 +124,63 @@ export async function openSyncModal(editor: Editor, sync: SyncService, t: Transl
   }
   return body;
 }
+
+/**
+ * A new component: its name and what it starts from — empty, or an item of
+ * a source another plugin registered (`components.addSource`). Resolves to
+ * null when closed without creating.
+ */
+export function openComponentFromModal(
+  editor: Editor,
+  t: Translator,
+  sources: Array<{ id: string; label: string; items: Array<{ id: string; name: string }> }>,
+  defaultName: string
+): Promise<{ name: string; from: { source: string; item: string } | null } | null> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v: { name: string; from: { source: string; item: string } | null } | null): void => {
+      if (done) return;
+      done = true;
+      resolve(v);
+    };
+    const name = h('input', { class: 'gjsp-input', type: 'text', name: 'name', value: defaultName, 'aria-label': t('componentName') });
+    const from = h(
+      'select',
+      { class: 'gjsp-input', name: 'from', 'aria-label': t('startFrom') },
+      h('option', { value: '' }, t('emptyComponent')),
+      ...sources
+        .filter((s) => s.items.length)
+        .map((s) => h('optgroup', { label: s.label }, ...s.items.map((i) => h('option', { value: JSON.stringify([s.id, i.id]) }, i.name))))
+    );
+    // Picking an item suggests its name (until the name was typed).
+    let typed = false;
+    name.addEventListener('input', () => (typed = true));
+    from.addEventListener('change', () => {
+      if (typed || !from.value) return;
+      name.value = from.selectedOptions[0]?.textContent || defaultName;
+    });
+    const submit = (): void => {
+      const v = from.value ? (JSON.parse(from.value) as [string, string]) : null;
+      finish({ name: name.value.trim() || defaultName, from: v ? { source: v[0], item: v[1] } : null });
+      editor.Modal.close();
+    };
+    name.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter') submit();
+    });
+    const content = h(
+      'div',
+      { class: 'gjsp-modal gjsp-component-from' },
+      h('label', {}, t('componentName'), name),
+      h('label', {}, t('startFrom'), from),
+      h(
+        'div',
+        { class: 'gjsp-actions' },
+        h('button', { class: 'gjsp-primary', type: 'button', 'data-role': 'create', onclick: submit }, t('createComponent')),
+        closeBtn(editor, t)
+      )
+    );
+    editor.Modal.open({ title: t('newComponent'), content });
+    (editor.Modal as any).onceClose?.(() => finish(null));
+    setTimeout(() => name.focus());
+  });
+}

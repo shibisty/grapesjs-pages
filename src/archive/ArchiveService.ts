@@ -1,7 +1,8 @@
 import type { Editor } from 'grapesjs';
 import type { PagesManager } from '../core/PagesManager';
 import { EVENTS } from '../events';
-import { canvasMarkup, normalizeSlug, type RemoteEditor } from '../remote/RemoteEditor';
+import { type MarkupHook, normalizeSlug, type RemoteEditor, runMarkupHooks } from '../remote/RemoteEditor';
+import { SHARED_META } from '../core/SharedData';
 import { SITE_ID } from '../remote/RemoteClient';
 import type { PageStore } from '../store/types';
 import type { PageRecord, RecordKind } from '../types';
@@ -76,7 +77,9 @@ export class ArchiveService {
     private readonly editor: Editor,
     private readonly manager: PagesManager,
     private readonly store: PageStore,
-    private readonly remote: RemoteEditor | null
+    private readonly remote: RemoteEditor | null,
+    /** Local mode: the publish hooks of other plugins, so `body.html` is what they would add too. */
+    private readonly markupHooks: MarkupHook[] = []
   ) {}
 
   /** The records as archive records (projects, header fields, field lists, optionally markup). */
@@ -118,7 +121,7 @@ export class ArchiveService {
       for (const a of out) {
         const rec = byId.get(a.id)!;
         await this.manager.open(a.id, { silent: true });
-        const m = this.remote ? await this.remote.publishMarkup(a.kind, rec) : canvasMarkup(this.editor, a.kind);
+        const m = this.remote ? await this.remote.publishMarkup(a.kind, rec) : await runMarkupHooks(this.editor, a.kind, rec, this.markupHooks);
         if (a.kind !== 'site') a.html = m.html;
         a.css = m.css;
         onProgress?.(++done, out.length);
@@ -135,7 +138,14 @@ export class ArchiveService {
   async exportBytes(opts: ExportOptions = {}): Promise<Uint8Array> {
     const records = await this.collect(opts);
     const site = records.find((r) => r.kind === 'site');
-    return packArchive(records, { generator: 'grapesjs-pages', source: this.remote?.store.client.base || 'local', name: site?.name || undefined });
+    // Remote mode keeps the shared keys in the site's project, which is in the archive already.
+    const shared = this.remote ? undefined : await this.store.getMeta<Record<string, unknown>>(SHARED_META);
+    return packArchive(records, {
+      generator: 'grapesjs-pages',
+      source: this.remote?.store.client.base || 'local',
+      name: site?.name || undefined,
+      ...(shared ? { shared } : {}),
+    });
   }
 
   /** Reads an archive and writes its records here. */
@@ -217,6 +227,14 @@ export class ArchiveService {
         report_.errors.push({ id: a.id, name: a.name, error: (e as Error)?.message || String(e) });
       }
       opts.onProgress?.(++done, plan.length);
+    }
+    // Shared project keys: local mode from shared.json (copy mode only adds
+    // keys that have no value here); remote mode came with the site record.
+    try {
+      if (!this.remote && arc.shared) await this.manager.importShared(arc.shared, mode === 'replace');
+      else if (this.remote) await this.manager.reloadShared();
+    } catch (e) {
+      report_.errors.push({ id: 'shared.json', name: 'shared.json', error: (e as Error)?.message || String(e) });
     }
     if (reopen && active) await this.manager.open(active, { force: true, skipFlush: true }).catch(report);
     this.editor.trigger(EVENTS.change);

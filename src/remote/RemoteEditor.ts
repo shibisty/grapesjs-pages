@@ -5,7 +5,7 @@ import type { Translator } from '../i18n';
 import { IndexedDbPageStore } from '../store/IndexedDbPageStore';
 import type { PageStore } from '../store/types';
 import type { PageRecord, PublishMarkup, RecordKind, RecordPatch, RemoteOptions, Revision } from '../types';
-import { clone, uid } from '../utils';
+import { clone, report, uid } from '../utils';
 import { fromWire, SITE_ID } from './RemoteClient';
 import type { RemotePageStore } from './RemotePageStore';
 
@@ -44,6 +44,36 @@ export function canvasMarkup(editor: Editor, kind: RecordKind): { html: string; 
   return { html, css };
 }
 
+export type MarkupHook = (out: PublishMarkup) => PublishMarkup | void | Promise<PublishMarkup | void>;
+
+/**
+ * The open record's markup (`canvasMarkup`) passed through the hooks in
+ * order; each gets the previous result. A hook that throws is reported
+ * and skipped, so one plugin cannot stop a publish or an export.
+ */
+export async function runMarkupHooks(
+  editor: Editor,
+  kind: RecordKind,
+  record: PageRecord,
+  hooks: Array<MarkupHook | null | undefined>
+): Promise<{ html: string; css: string }> {
+  const base = canvasMarkup(editor, kind);
+  let html = base.html;
+  let css = base.css;
+  for (const h of hooks) {
+    if (!h) continue;
+    try {
+      const out: PublishMarkup = { html, css, kind, record: clone(record) };
+      const r = (await h(out)) || out;
+      html = String(r.html ?? html);
+      css = String(r.css ?? css);
+    } catch (e) {
+      report(e);
+    }
+  }
+  return { html, css };
+}
+
 /** The meta key a v1 database gets once imported into a server. */
 export const importedKey = (url: string): string => `importedTo:${url}`;
 
@@ -58,7 +88,7 @@ export class RemoteEditor {
     readonly store: RemotePageStore,
     private readonly t: Translator,
     private readonly v1Store: () => PageStore = () => new IndexedDbPageStore(),
-    private readonly markupHook: RemoteOptions['markup'] = null
+    public markupHook: RemoteOptions['markup'] = null
   ) {}
 
   private emit(event: string, ...args: unknown[]): void {
@@ -103,14 +133,12 @@ export class RemoteEditor {
     return rec;
   }
 
-  /** The open record's markup as a publish sends it (through the `markup` option). */
+  /** Markup hooks of other plugins (`hooks.onPublish`), run after the `markup` option. */
+  readonly markupHooks: MarkupHook[] = [];
+
+  /** The open record's markup as a publish sends it (through the `markup` option and the hooks). */
   async publishMarkup(kind: RecordKind, record: PageRecord): Promise<{ html: string; css: string }> {
-    const base = canvasMarkup(this.editor, kind);
-    if (!this.markupHook) return base;
-    const out: PublishMarkup = { ...base, kind, record: clone(record) };
-    const res = await this.markupHook(out);
-    const r = res || out;
-    return { html: String(r.html ?? base.html), css: String(r.css ?? base.css) };
+    return runMarkupHooks(this.editor, kind, record, [this.markupHook, ...this.markupHooks]);
   }
 
   /**

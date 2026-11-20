@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: '组件“%s”已保存',
   editingComponent: '组件“%s”：更改将应用于所有页面',
   backTo: '← 返回“%s”',
+  startFrom: '起点',
+  emptyComponent: '空白',
+  createComponent: '创建',
 };
 
 export default messages;

@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'הרכיב "%s" נשמר',
   editingComponent: 'רכיב "%s": השינויים יחולו בכל הדפים',
   backTo: '← חזרה אל "%s"',
+  startFrom: 'להתחיל מ־',
+  emptyComponent: 'ריק',
+  createComponent: 'יצירה',
 };
 
 export default messages;

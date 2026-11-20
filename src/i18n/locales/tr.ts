@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: '“%s” bileşeni kaydedildi',
   editingComponent: '“%s” bileşeni: değişiklikler her sayfada uygulanır',
   backTo: '← “%s” sayfasına dön',
+  startFrom: 'Şununla başla',
+  emptyComponent: 'Boş',
+  createComponent: 'Oluştur',
 };
 
 export default messages;

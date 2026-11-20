@@ -130,6 +130,71 @@ remote mode a server can swap in the component's latest published HTML (see
 "component"`, remote mode uses `/components` (a server without it answers
 `404` and the components stay in the local cache).
 
+## For other plugins: shared keys and hooks
+
+Every record is a whole GrapesJS project, so whatever another plugin keeps
+in the project data (its storable) would be copied into each page. These
+APIs let such a plugin work site-wide (grapesjs-blueprints uses them):
+
+```js
+const pm = editor.PagesManager;
+
+// A key of the project data kept once per site, put into every opened record.
+await pm.shared.register('scripts');   // local: the store's meta; remote: the site record
+pm.shared.get('scripts');               // current value (a copy)
+await pm.shared.set('scripts', value);  // also given to the open record's storable
+editor.on('pages-manager:shared', ({ key, value }) => {});
+
+// Add things to a record's project when it is loaded, take them out on save.
+const offLoad = pm.hooks.onLoad((data, record) => ({ ...data, styles: [...data.styles, siteRule] }));
+const offSave = pm.hooks.onSave((data, record) => ({ ...data, styles: data.styles.filter((r) => !r.mine) }));
+
+// Change what a publish sends (and an archive's body.html / style.css).
+const offPub = pm.hooks.onPublish(({ html, css, kind, record }) => ({ html: html + tags, css }));
+```
+
+- **Migration.** The first record opened that still has its own copy of a
+  registered key gives the shared value; later per-page copies are ignored.
+  When the editor starts empty, an existing shared value (e.g. the site's
+  from the server) wins over the initial content.
+- **Undo** is per page and does not undo a shared value.
+- The open record's plugin gets a changed value through its storable
+  (`load({ [key]: value })`) without reloading the page.
+- **Hooks** run on open, undo/redo and every save, and must be pure and
+  idempotent. A hook that throws is reported and skipped. Remove a pair
+  in this order: `offLoad()`, reopen the record, then `offSave()`.
+- **Archive.** Local mode writes `shared.json`; remote mode keeps the keys
+  in the site's project. Import in `copy` mode keeps the values that exist.
+- Publish hooks run after the `remote.markup` option, each on the previous
+  result.
+
+### Component sources and record actions
+
+Another plugin can offer starting points for new components. When a
+source has items, the "+" of the Components section asks for a name and
+what to start from (empty or one of the items):
+
+```js
+const pages = editor.PagesManager;
+const off = pages.components.addSource({
+  id: 'blueprints',
+  label: 'Blueprints',
+  list: () => [{ id: 'card', name: 'Card' }],
+  build: (id) => ({ type: 'my-card' }), // a GrapesJS component definition (or an array)
+});
+await pages.components.create('Card', { source: 'blueprints', item: 'card' });
+```
+
+Buttons on records in the sidebar come from the
+`pages-manager:record-actions` event; push `{ id, label, icon?, run(record) }`
+into `actions`:
+
+```js
+editor.on('pages-manager:record-actions', ({ record, actions }) => {
+  actions.push({ id: 'scripts', label: 'Scripts & styles', icon: '{}', run: (r) => openFor(r.id) });
+});
+```
+
 ## Remote mode (contract v2)
 
 ```js
@@ -151,7 +216,7 @@ pages(editor, {
 | `retryDelay` | `2000` | First retry after a failed save, ms; doubles up to 60 s. |
 | `cacheDbName` | `<dbName>-remote-<hash of url>` | IndexedDB database of the cache. |
 | `cache` | IndexedDB | Your own `PageStore` as the cache (`MemoryPageStore` in tests). |
-| `markup` | — | `({ html, css, kind, record }) => ({ html, css })`, may be async: changes what a publish sends, e.g. adds the tags of another plugin's scripts or fonts. Return nothing to keep it. |
+| `markup` | — | `({ html, css, kind, record }) => ({ html, css })`, may be async: changes what a publish sends, e.g. adds the tags of another plugin's scripts or fonts. Return nothing to keep it. Plugins add theirs with `hooks.onPublish` (run after this one). |
 
 How it works:
 
@@ -270,6 +335,7 @@ are not in it.
 
 ```
 manifest.json            format, version, the records with their header fields
+shared.json              local mode: the shared keys of other plugins (`shared.register`)
 site/                    project.json, style.css, settings.json
 components/<name>/       project.json, body.html, style.css, index.html   (linked components)
 layouts/<name>/          project.json, body.html, style.css

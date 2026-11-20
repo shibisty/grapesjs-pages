@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Το στοιχείο «%s» αποθηκεύτηκε',
   editingComponent: 'Στοιχείο «%s»: οι αλλαγές εφαρμόζονται σε όλες τις σελίδες',
   backTo: '← Επιστροφή στη «%s»',
+  startFrom: 'Έναρξη από',
+  emptyComponent: 'Κενό',
+  createComponent: 'Δημιουργία',
 };
 
 export default messages;

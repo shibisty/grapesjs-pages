@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Component “%s” saved',
   editingComponent: 'Component “%s”: changes apply on every page',
   backTo: '← Back to “%s”',
+  startFrom: 'Start from',
+  emptyComponent: 'Empty',
+  createComponent: 'Create',
 };
 
 export default messages;

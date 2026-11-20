@@ -122,6 +122,9 @@ const messages: PagesLabels = {
   componentSaved: 'Компонент «%s» збережено',
   editingComponent: 'Компонент «%s»: зміни з’являться на всіх сторінках',
   backTo: '← Назад до «%s»',
+  startFrom: 'Почати з',
+  emptyComponent: 'Порожній',
+  createComponent: 'Створити',
 };
 
 export default messages;

@@ -30,6 +30,13 @@ export const EVENTS = {
   imported: 'pages-manager:imported',
   /** The list of components changed. Payload: `Master[]`. */
   components: 'pages-manager:components',
+  /**
+   * Asked for each record shown in the sidebar: push `{ id, label, icon?, run(record) }`
+   * into `actions` to add a button to it. Payload: `{ record, actions }`.
+   */
+  recordActions: 'pages-manager:record-actions',
+  /** A shared project key got a new value (`shared.register`). Payload: `{ key, value }`. */
+  shared: 'pages-manager:shared',
 } as const;
 
 /** Command ids registered by the plugin. */
