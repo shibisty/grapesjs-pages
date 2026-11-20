@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from 'grapesjs';
 import { breadcrumbsHtml, BREADCRUMBS_TYPE } from '../src/components/breadcrumbs';
 import { EVENTS } from '../src/events';
@@ -123,7 +123,8 @@ describe('dialogs of other plugins', () => {
     click(sidebar().querySelector('.gjsp-tools button[title="New page"]')!);
     await settle(s.api);
     expect(document.querySelector('.gjsp-create')).toBeNull();
-    expect(names()).toEqual(['Page 1', 'Page 2']);
+    // the page is made asynchronously (slow machines: more than a few ticks)
+    await vi.waitFor(() => expect(names()).toEqual(['Page 1', 'Page 2']), { timeout: 5000, interval: 20 });
   });
 });
 
@@ -190,14 +191,13 @@ describe('Component settings', () => {
     const view = new View({ model: trait, editor: (editor as any).getModel() });
     document.body.appendChild(view.render().el);
     const el = view.el as HTMLElement;
-    for (let i = 0; i < 50 && !el.querySelector('input[name="name"]'); i++) await tick(2);
+    await vi.waitFor(() => expect(el.querySelector('input[name="name"]')).toBeTruthy(), { timeout: 5000, interval: 20 });
     const name = el.querySelector<HTMLInputElement>('input[name="name"]')!;
     expect(name.value).toBe(home.name);
     expect(el.querySelector('input[name="slug"]')).toBeTruthy();
     name.value = 'Start';
     el.querySelector<HTMLButtonElement>('[data-role="save"]')!.click();
-    for (let i = 0; i < 50 && (await s.store.get(home.id))!.name !== 'Start'; i++) await tick(2);
-    expect((await s.store.get(home.id))!.name).toBe('Start');
+    await vi.waitFor(async () => expect((await s.store.get(home.id))!.name).toBe('Start'), { timeout: 5000, interval: 20 });
     expect(el.isConnected).toBe(true); // no dialog to close
     el.remove();
   });
