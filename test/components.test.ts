@@ -39,13 +39,13 @@ const lib = (...m: Master[]) => new Map(m.map((x) => [x.id, x]));
 const inst = (target: string, id = 'k1'): Json => ({ type: INSTANCE_TYPE, attributes: { [INSTANCE_ATTR]: target, id } });
 
 describe('expand (pure)', () => {
-  it('builds locked content with ids scoped to the instance', () => {
+  it('builds editable content, marked with its instance, with ids scoped to the instance', () => {
     const b = buildInstance(footer, 'k1', lib(footer));
     const ft = b.components[0];
     expect(ft.attributes.id).toBe('ft-k1');
-    expect(ft.locked).toBe(true);
-    expect(ft.selectable).toBe(false);
-    expect(ft.components[0].removable).toBe(false);
+    expect(ft.locked).toBeUndefined();
+    expect(ft.gjspIn).toBe('k1');
+    expect(ft.components[0].removable).toBeUndefined();
     // the master is not mutated
     expect(footer.components[0].attributes.id).toBe('ft');
   });
@@ -164,10 +164,10 @@ describe('save as component', () => {
     // same position, same content
     expect(s.editor.getWrapper()!.components().at(1)).toBe(i);
     expect(html(s.editor)).toContain('Copyright');
-    // content is read-only
+    // the content is edited in place
     const inner = i.components().at(0);
-    expect(inner.get('locked')).toBe(true);
-    expect(inner.get('removable')).toBe(false);
+    expect(inner.get('locked')).toBeFalsy();
+    expect(inner.get('selectable')).not.toBe(false);
   });
 
   it('the styles go with the component and still apply', async () => {
@@ -276,7 +276,7 @@ describe('linked instances', () => {
     editor = b.editor;
     expect(instances(b.editor)).toHaveLength(1);
     expect(blocks(b.editor)).toHaveLength(1);
-    expect(instances(b.editor)[0].components().at(0).get('locked')).toBe(true);
+    expect(instances(b.editor)[0].components().at(0).getAttributes().id).toMatch(/-/);
   });
 
   it('detach turns an instance into a plain, editable copy that no longer follows the component', async () => {
@@ -357,19 +357,51 @@ describe('editing a component', () => {
     expect(blocks(s.editor)).toHaveLength(1);
   });
 
-  it('a double click on an instance opens its component', async () => {
+  it('edited in place: content and styles go to the component, every instance follows, here and on other pages', async () => {
     const s = await withFooter();
-    const view = (instances(s.editor)[0] as any).view;
-    view.el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    await tick(30);
-    expect(s.api.getActiveId()).toBe(s.id);
+    const about = await s.api.create({ name: 'About' });
+    s.api.components.insert(s.id);
+    await settle(s.api);
+    await s.api.open(s.homeId);
+    s.api.components.insert(s.id); // a second instance on the home page
+    await settle(s.api);
+    const saved: string[] = [];
+    s.editor.on(EVENTS.componentSaved, (e: any) => saved.push(e.id));
+    const [a, b] = instances(s.editor);
+    expect(b).toBeTruthy();
+    // edit the text of the first instance, style its footer
+    const p = a.find('p')[0];
+    p.components('Edited in place');
+    const ft = a.components().at(0);
+    ft.setStyle({ 'background-color': 'navy' });
+    await new Promise((r) => setTimeout(r, 700));
+    await settle(s.api);
+    expect(saved).toContain(s.id);
+    // the component record
+    const rec = (await s.store.get(s.id))!;
+    const recJson = JSON.stringify(rec.data);
+    expect(recJson).toContain('Edited in place');
+    expect(recJson).not.toContain(`-${a.getAttributes().id}`); // ids back as the component's
+    expect(recJson).toContain('navy');
+    // the other instance on this page follows at once
+    expect(b.find('p')[0].getInnerHTML()).toBe('Edited in place');
+    expect(s.editor.getCss()).toContain(`#${b.components().at(0).getId()}{background-color:navy;}`);
+    // another page
+    await s.api.open(about.id);
+    expect(html(s.editor)).toContain('Edited in place');
+    expect(s.editor.getCss()).toContain('background-color:navy');
   });
 
-  it('an instance gets an "edit component" toolbar button', async () => {
+  it('opening a page or rebuilding instances is not an edit of the component', async () => {
     const s = await withFooter();
-    await tick(5);
-    const tb = instances(s.editor)[0].get('toolbar') as any[];
-    expect(tb[0].command).toBe(COMMANDS.editComponent);
+    const before = (await s.store.get(s.id))!.updatedAt;
+    const about = await s.api.create({ name: 'About' });
+    s.api.components.insert(s.id);
+    await settle(s.api);
+    await s.api.open(s.homeId);
+    await new Promise((r) => setTimeout(r, 700));
+    expect((await s.store.get(s.id))!.updatedAt).toBe(before);
+    void about;
   });
 
   it('a new component from the sidebar opens empty', async () => {

@@ -368,7 +368,8 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   let boardBack: string | null = null;
   const boardItems = async (): Promise<BoardItem[]> =>
     (await manager.list())
-      .filter((r) => !r.deleted && (r.kind || 'page') !== 'site')
+      // Data records of grapesjs-storage are content: the board shows their templates (design pages) only.
+      .filter((r) => !r.deleted && (r.kind || 'page') !== 'site' && !r.dataOf)
       .map((r) => {
         const kind = r.kind || 'page';
         const section: BoardSection = kind === 'page' ? (r.dataOf ? 'data' : 'page') : (kind as BoardSection);
@@ -387,6 +388,11 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   /** Live board: the record being edited (the renderer may hold another one in the canvas meanwhile). */
   let editing: string | null = null;
   let snapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** A component changed (edited in place): the other frames are drawn again at the next switch. */
+  let boardStale = false;
+  on(EVENTS.componentSaved, () => {
+    if (board) boardStale = true;
+  });
   const closeBoard = (target: string | null): void => {
     if (!board) return;
     // A board tab: leave it for the tab of the record being edited (the board tab stays).
@@ -492,18 +498,45 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       }
       live?.setWidth(width);
     };
+    /** The canvas frame loaded and its height settled (no jumps when it is shown). */
+    const settled = (): Promise<void> =>
+      new Promise((resolve) => {
+        let done = false;
+        const finish = (): void => {
+          if (done) return;
+          done = true;
+          editor.off('canvas:frame:load', onLoad);
+          setTimeout(resolve, 250);
+        };
+        const onLoad = (): void => finish();
+        editor.on('canvas:frame:load', onLoad);
+        setTimeout(finish, 1500);
+      });
     const activate = (id: string): void => {
       void (async () => {
         await renderer.idle();
         if (!board || id === editing) return;
-        // The page left keeps its last look.
-        const snap = await renderer.snapshotNow();
-        if (snap) board?.setSnapshot(snap.id, snap.snap);
-        editing = id;
-        board?.update();
-        await manager.open(id);
-        if (board) showAs(board.deviceOf(id), board.widthOf(id));
-        board?.update();
+        board.setBusy(t('boardOpening'));
+        live?.setBusy(true);
+        try {
+          // The page left keeps its last look.
+          const snap = await renderer.snapshotNow();
+          if (snap) board?.setSnapshot(snap.id, snap.snap);
+          editing = id;
+          board?.update();
+          const loaded = settled();
+          await manager.open(id);
+          if (board) showAs(board.deviceOf(id), board.widthOf(id));
+          await loaded;
+          board?.update();
+          if (boardStale) {
+            boardStale = false;
+            board?.refresh();
+          }
+        } finally {
+          if (!renderer.busy) live?.setBusy(false);
+          board?.setBusy(null);
+        }
       })().catch(report);
     };
     board = new Board({
@@ -521,14 +554,25 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       devices: boardDevices,
       ...(useLive ? { live: { activeId: () => editing, activate, place: (p) => live?.place(p), device: showAs } } : {}),
     });
+    renderer.onProgress = (done, total) => board?.setProgress(done, total);
+    // First load: the veil until the frames in view are drawn and the canvas is in place.
+    board.setBusy(t('boardLoading').replace('%s', ''));
+    live?.setBusy(true);
     live?.enter();
     void board
       .show()
-      .then(() => {
+      .then(async () => {
         const cur = editing;
         if (live && board && cur) showAs(board.deviceOf(cur), board.widthOf(cur));
+        await new Promise((r) => setTimeout(r, 120)); // the first paint asks for the frames
+        await renderer.idle();
+        await new Promise((r) => setTimeout(r, 250));
       })
-      .catch(report);
+      .catch(report)
+      .finally(() => {
+        if (!renderer.busy) live?.setBusy(false);
+        board?.setBusy(null);
+      });
     boardShown = !!live;
     editor.trigger(EVENTS.board, { open: true, live: !!live });
   };

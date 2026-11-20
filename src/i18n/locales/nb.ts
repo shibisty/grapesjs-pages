@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Vis alt',
   boardFitFrame: 'Tilpass denne rammen',
   boardRefresh: 'Tegn på nytt',
+  boardLoading: 'Tegner sidene… %s',
+  boardOpening: 'Åpner siden…',
   boardPages: 'Sider',
   boardData: 'Dataposter',
   boardLayouts: 'Oppsett',

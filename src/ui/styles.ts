@@ -157,6 +157,14 @@ p.gjsp-seo-hint{margin:0 0 10px}
 .gjsp-board__wait{color:#999;font-size:calc(14px * var(--gjsp-inv,1));padding:8px;text-align:center}
 .gjsp-board__frame.is-loading .gjsp-board__wait::after{content:" …"}
 .gjsp-board__iframe{position:absolute;left:0;top:0;height:100%;border:0;pointer-events:none;background:#fff}
+.gjsp-board__veil{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:rgba(20,20,20,.55);backdrop-filter:blur(2px);pointer-events:auto}
+.gjsp-board__veil[hidden]{display:none}
+.gjsp-board__veil{top:40px}
+.gjsp-board__veil-box{min-width:240px;padding:14px 18px;border-radius:8px;background:rgba(0,0,0,.6);color:#eee;font-size:12px;text-align:center}
+.gjsp-board__veil-track{margin-top:8px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);overflow:hidden}
+.gjsp-board__veil-bar{height:100%;width:0;background:var(--gjs-quaternary-color,#d278c9);transition:width .2s}
+.gjsp-board__veil-bar.is-indeterminate{width:35%!important;animation:gjsp-veil 1s ease-in-out infinite alternate}
+@keyframes gjsp-veil{from{margin-left:0}to{margin-left:65%}}
 .gjsp-board__hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:4px 10px;border-radius:12px;font-size:11px;opacity:.8;pointer-events:none;white-space:nowrap}
 .gjsp-board--live{position:absolute;inset:0;display:block;background:none;z-index:auto;pointer-events:none}
 .gjsp-board--live .gjsp-board__bar{position:absolute;left:0;right:0;top:0;z-index:5;pointer-events:auto}

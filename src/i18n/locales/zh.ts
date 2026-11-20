@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: '显示全部',
   boardFitFrame: '适应此画框',
   boardRefresh: '重新绘制',
+  boardLoading: '正在绘制页面… %s',
+  boardOpening: '正在打开页面…',
   boardPages: '页面',
   boardData: '数据',
   boardLayouts: '布局',

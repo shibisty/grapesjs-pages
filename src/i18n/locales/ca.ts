@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Mostra-ho tot',
   boardFitFrame: 'Ajusta aquest marc',
   boardRefresh: 'Torna a dibuixar',
+  boardLoading: 'Dibuixant les pàgines… %s',
+  boardOpening: 'Obrint la pàgina…',
   boardPages: 'Pàgines',
   boardData: 'Dades',
   boardLayouts: 'Dissenys',

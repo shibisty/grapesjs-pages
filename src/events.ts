@@ -30,6 +30,8 @@ export const EVENTS = {
   imported: 'pages-manager:imported',
   /** The list of components changed. Payload: `Master[]`. */
   components: 'pages-manager:components',
+  /** A component's content changed from one of its instances (edited in place). Payload: `{ id, record }`. */
+  componentSaved: 'pages-manager:component-saved',
   /**
    * Asked for each record shown in the sidebar: push `{ id, label, icon?, run(record) }`
    * into `actions` to add a button to it. Payload: `{ record, actions }`.
@@ -46,10 +48,15 @@ export const EVENTS = {
   board: 'pages-manager:board',
   /**
    * A record is about to be rendered for the board (opened silently).
-   * Payload: `{ record, waitFor(promise) }` — plugins that fill the canvas
-   * from their own data (grapesjs-storage) load it and pass the promise.
+   * Payload: `{ record, waitFor(promise), placeholders, inPlace }` — plugins
+   * that fill the canvas from their own data (grapesjs-storage) load it and
+   * pass the promise; `placeholders`: draw the fields as placeholders in the
+   * markup (the board shows templates); `inPlace`: the record is already in
+   * the canvas. `pages-manager:rendered` follows.
    */
   rendering: 'pages-manager:rendering',
+  /** The board took the record's markup: plugins go back to normal. Payload: `{ record }`. */
+  rendered: 'pages-manager:rendered',
 } as const;
 
 /** Command ids registered by the plugin. */

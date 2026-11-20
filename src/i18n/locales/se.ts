@@ -141,6 +141,8 @@ const messages: PagesLabels = {
   boardFit: 'Visa allt',
   boardFitFrame: 'Anpassa den här ramen',
   boardRefresh: 'Rita om',
+  boardLoading: 'Ritar sidorna… %s',
+  boardOpening: 'Öppnar sidan…',
   boardPages: 'Sidor',
   boardData: 'Dataposter',
   boardLayouts: 'Layouter',

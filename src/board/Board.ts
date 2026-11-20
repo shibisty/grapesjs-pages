@@ -102,6 +102,11 @@ export class Board {
   private readonly vp: HTMLElement;
   private readonly world: HTMLElement;
   private readonly zoomLabel: HTMLButtonElement;
+  private readonly veil: HTMLElement;
+  private readonly veilText: HTMLElement;
+  private readonly veilBar: HTMLElement;
+  private busyText: string | null = null;
+  private progress = { done: 0, total: 0 };
   private readonly chips: HTMLElement;
   private items: BoardItem[] = [];
   private frames: FrameBox[] = [];
@@ -127,6 +132,10 @@ export class Board {
     this.chips = h('div', { class: 'gjsp-board__chips' });
     this.world = h('div', { class: 'gjsp-board__world' });
     this.vp = h('div', { class: 'gjsp-board__vp', tabindex: '0' }, this.world);
+    // Over the board while frames load or a page is being opened: nothing jumps under the pointer.
+    this.veilText = h('div', { class: 'gjsp-board__veil-text' });
+    this.veilBar = h('div', { class: 'gjsp-board__veil-bar' });
+    this.veil = h('div', { class: 'gjsp-board__veil', hidden: true, 'aria-live': 'polite' }, h('div', { class: 'gjsp-board__veil-box' }, this.veilText, h('div', { class: 'gjsp-board__veil-track' }, this.veilBar)));
     this.root = h(
       'div',
       { class: `gjsp-board${d.live ? ' gjsp-board--live' : ''}`, role: d.live ? 'region' : 'dialog', 'aria-label': t('board') },
@@ -144,6 +153,7 @@ export class Board {
         btn('✕', t('close'), () => d.close(), 'close')
       ),
       this.vp,
+      this.veil,
       h('div', { class: 'gjsp-board__hint' }, t('boardHint'))
     );
     this.listen();
@@ -595,6 +605,29 @@ export class Board {
     if (Math.abs((heights[id] || 0) - v) < 2) return;
     heights[id] = v;
     this.relayout();
+  }
+
+  /** Frames being drawn: `done` of `total` (`total` 0 — none). */
+  setProgress(done: number, total: number): void {
+    this.progress = { done, total };
+    this.showVeil();
+  }
+
+  /** Something the board waits for (a page being opened); `null` — done. */
+  setBusy(text: string | null): void {
+    this.busyText = text;
+    this.showVeil();
+  }
+
+  private showVeil(): void {
+    const { done, total } = this.progress;
+    const on = !!this.busyText || total > done;
+    this.veil.hidden = !on;
+    this.root.classList.toggle('is-busy', on);
+    if (!on) return;
+    this.veilText.textContent = this.busyText || this.d.t('boardLoading').replace('%s', `${done}/${total}`);
+    this.veilBar.style.width = total ? `${Math.round((done / total) * 100)}%` : '100%';
+    this.veilBar.classList.toggle('is-indeterminate', !total);
   }
 
   /** Redraw (the live record changed). */

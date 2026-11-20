@@ -101,7 +101,8 @@ The **▦** button of the pages sidebar (or the command `pages-manager:board`) c
 
 - Move: drag the background, the middle button, Space + drag, wheel / trackpad. Zoom: Ctrl / ⌘ + wheel or pinch, `+` / `−`, `Shift+1` fits all, `Shift+0` is 100%.
 - Frames are drawn only when in view (at most 24 live at once, the nearest first; the others wait as named boxes) as static iframes — no scripts — and take their content's height. Drag a frame by its title to place it; the places, the heights and the view are kept (store meta `board`).
-- A frame shows what a publish would: the record is opened in the editor silently, other plugins get `pages-manager:rendering` (`{ record, waitFor(promise) }` — grapesjs-storage loads the record's data), then the publish hooks run. The result is kept per record by its `updatedAt` (and its design's); **⟳** draws everything again.
+- The board shows **templates**: pages, layouts, templates and components — not the data records of grapesjs-storage; their fields are drawn as placeholders. A frame is what a publish would send: the record is opened in the editor silently, other plugins get `pages-manager:rendering` (`{ record, waitFor(promise), placeholders, inPlace }` — grapesjs-storage loads the record's template and draws its fields as placeholders) and `pages-manager:rendered` after; the publish hooks run between. The result is kept per record by its `updatedAt` (its design's, and the newest linked component's); **⟳** draws everything again.
+- While frames are drawn, and while a page is being opened for editing, a veil with a progress bar covers the board: what is shown is what has finished loading (no jumping frames).
 - **Editing on the board** (`boardLive`, default `true`): the board is drawn inside the canvas, the editor's panels stay. Click a frame and that record is opened in the canvas, which sits on its frame and scales with the board — select, drag blocks, style and edit as usual, then click another frame. The record left keeps its look (its frame is redrawn from it); the one being edited is redrawn after each change. While other frames are rendered the canvas holds them in turn, so the edited frame is hidden for that moment and its selection comes back after.
 - **Above every frame**: the editor's devices (desktop / tablet / mobile from the Device Manager) — the frame takes that width; on the frame being edited the editor switches to that device too, so styles go to its media query — and zoom to this frame (⤢ fits its width, 1:1 is 100%). Choosing a device in the editor's own toolbar changes the frame being edited too.
 - **With grapesjs-sidebar-tools' workspace the board is a tab of its own** («▦ Board», a canvas document): ▦ opens / shows it; showing it enters the board, showing a page's tab leaves it (the page tabs are a normal canvas). Pages edited on the board get their tabs without being shown. The tab's × closes it.
@@ -132,13 +133,15 @@ Manager — so they can be dragged onto any page, and with
   `pages-manager:component-save`, or `components.save()`), or `+` in the
   Components section for an empty one. The element is replaced by a linked
   copy; its styles go with it.
-- **Linked copies** (instances) are read-only on the page: a click selects the
-  whole copy, which can be moved, duplicated, deleted and given its own outer
-  styles, but not edited inside.
-- **Edit**: double-click a copy, its toolbar's pencil or *Edit component* in
-  the context menu opens the component itself; a bar over the canvas says
-  so and leads back to the page. Every page shows the change the next time it
-  is opened.
+- **Edit in place**: the content of a linked copy is edited right on the
+  page — select, type, drag blocks in, style — and every change is written
+  back to the component (its content, the `#id` rules of its elements and the
+  class rules they use) after a short pause; the other copies on the page
+  follow at once, every other page the next time it is opened (and the board
+  draws them again). The copy itself — its place, its own outer styles — is
+  the page's. Event: `pages-manager:component-saved` `{ id, record }`.
+- **Open the component** as a record of its own: *Edit component* in the
+  context menu or in Component settings; a bar over the canvas leads back.
 - **Detach**: *Detach from component* turns a copy into ordinary, editable
   elements that no longer follow the component.
 - **Delete** a component: where it was used it stays as a plain copy.

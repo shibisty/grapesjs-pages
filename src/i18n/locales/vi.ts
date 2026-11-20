@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Hiện tất cả',
   boardFitFrame: 'Vừa khung này',
   boardRefresh: 'Vẽ lại',
+  boardLoading: 'Đang vẽ các trang… %s',
+  boardOpening: 'Đang mở trang…',
   boardPages: 'Trang',
   boardData: 'Dữ liệu',
   boardLayouts: 'Bố cục',

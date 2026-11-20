@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'הצגת הכול',
   boardFitFrame: 'התאמת מסגרת זו',
   boardRefresh: 'ציור מחדש',
+  boardLoading: 'מצייר דפים… %s',
+  boardOpening: 'פותח את הדף…',
   boardPages: 'דפים',
   boardData: 'נתונים',
   boardLayouts: 'פריסות',

@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'نمایش همه',
   boardFitFrame: 'جا دادن این قاب',
   boardRefresh: 'رسم دوباره',
+  boardLoading: 'در حال رسم صفحه‌ها… %s',
+  boardOpening: 'در حال باز کردن صفحه…',
   boardPages: 'صفحه‌ها',
   boardData: 'داده‌ها',
   boardLayouts: 'چیدمان‌ها',

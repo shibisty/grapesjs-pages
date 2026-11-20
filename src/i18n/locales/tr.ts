@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Tümünü göster',
   boardFitFrame: 'Bu çerçeveye sığdır',
   boardRefresh: 'Yeniden çiz',
+  boardLoading: 'Sayfalar çiziliyor… %s',
+  boardOpening: 'Sayfa açılıyor…',
   boardPages: 'Sayfalar',
   boardData: 'Veriler',
   boardLayouts: 'Düzenler',

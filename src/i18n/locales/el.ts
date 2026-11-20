@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Εμφάνιση όλων',
   boardFitFrame: 'Προσαρμογή αυτού του πλαισίου',
   boardRefresh: 'Επανασχεδίαση',
+  boardLoading: 'Σχεδίαση σελίδων… %s',
+  boardOpening: 'Άνοιγμα σελίδας…',
   boardPages: 'Σελίδες',
   boardData: 'Δεδομένα',
   boardLayouts: 'Διατάξεις',

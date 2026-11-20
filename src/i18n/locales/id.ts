@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Tampilkan semua',
   boardFitFrame: 'Paskan bingkai ini',
   boardRefresh: 'Gambar ulang',
+  boardLoading: 'Menggambar halaman… %s',
+  boardOpening: 'Membuka halaman…',
   boardPages: 'Halaman',
   boardData: 'Rekaman data',
   boardLayouts: 'Tata letak',

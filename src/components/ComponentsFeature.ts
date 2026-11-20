@@ -8,12 +8,14 @@ import { fmt, report, uid } from '../utils';
 import {
   buildInstance,
   componentProject,
+  contentBack,
   detachJson,
   expandProject,
   INSTANCE_ATTR,
   INSTANCE_TYPE,
   type Master,
   masterOf,
+  ruleBack,
   ruleKey,
   RULE_INSTANCE,
   RULE_TAG,
@@ -27,8 +29,6 @@ export const BLOCK_PREFIX = 'gjsp-component-';
 
 const ICON =
   '<svg viewBox="0 0 24 24" width="40" height="40"><path fill="currentColor" d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm11.5 0 4.5 3.5-4.5 3.5z"/></svg>';
-const TOOLBAR_EDIT =
-  '<svg viewBox="0 0 24 24" style="display:inline-block;vertical-align:middle;width:16px;height:16px"><path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zm17.7-10.2a1 1 0 0 0 0-1.42l-2.33-2.33a1 1 0 0 0-1.42 0l-1.83 1.83 3.75 3.75z"/></svg>';
 
 /** The instance a component belongs to (itself, or the closest instance around it). */
 export function instanceOf(c: Component | null | undefined): Component | null {
@@ -77,10 +77,12 @@ export interface ComponentsApi {
 
 /**
  * Linked components: records of kind `component`, offered as blocks (and so
- * in grapesjs-context-menu's "Add element"), inserted as read-only
- * instances that are rebuilt from the component every time a page is
- * opened. Editing the component = opening its record; "detach" turns an
- * instance into a plain copy.
+ * in grapesjs-context-menu's "Add element"), inserted as instances that are
+ * rebuilt from the component every time a page is opened. An instance is
+ * edited in place: a change inside it is written back to the component
+ * (content and styles) and every other instance follows. The component can
+ * still be opened as a record of its own; "detach" turns an instance into a
+ * plain copy.
  */
 export class ComponentsFeature implements ComponentsApi {
   private masters = new Map<string, Master>();
@@ -99,6 +101,7 @@ export class ComponentsFeature implements ComponentsApi {
     private readonly flash: (text: string) => void = () => undefined
   ) {
     this.registerType();
+    this.watchEdits();
     manager.setPrepare((data, rec) => this.prepare(data, rec));
     const on = (ev: string, fn: (...a: any[]) => void): void => {
       editor.on(ev, fn);
@@ -184,7 +187,7 @@ export class ComponentsFeature implements ComponentsApi {
         defaults: {
           tagName: 'div',
           name: 'Component',
-          droppable: false,
+          droppable: true,
           editable: false,
           // Component settings: what it is linked to, Edit, Detach (see ui/settings.ts).
           traits: [{ type: 'gjsp-instance', name: 'gjsp-instance', changeProp: true }],
@@ -193,14 +196,146 @@ export class ComponentsFeature implements ComponentsApi {
           feature.initInstance(this);
         },
       },
-      view: {
-        events: { dblclick: 'onDblClick' } as any,
-        onDblClick(this: { model: Component }, e: Event) {
-          e.stopPropagation();
-          void feature.edit(this.model).catch(report);
-        },
-      },
     } as any);
+    void feature;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Editing in place                                                   */
+  /* ------------------------------------------------------------------ */
+
+  /** Instances changed since the last write-back. */
+  private dirtyInstances = new Set<Component>();
+  private writeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Rebuilding instances: their changes are not edits. */
+  private quiet = 0;
+
+  /** Watches the canvas: a change inside an instance is an edit of its component. */
+  private watchEdits(): void {
+    /**
+     * `inside`: the change is in the content (`c` is in an instance, or its
+     * children changed). The instance itself (its own attributes, its `#id`
+     * styles) stays the page's.
+     */
+    const mark = (c: any, children: boolean): void => {
+      if (this.quiet || (this.manager as any).muted || !c?.get) return;
+      // An instance inside the component opened as a record is not edited in place.
+      if (this.activeComponentId()) return;
+      const inst = instanceOf(c);
+      if (!inst || (inst === c && !children)) return;
+      this.dirtyInstances.add(inst);
+      if (this.writeTimer) clearTimeout(this.writeTimer);
+      this.writeTimer = setTimeout(() => void this.writeBack().catch(report), 500);
+    };
+    const onUpdate = (c: any): void => mark(c, false);
+    const onChildren = (c: any): void => mark(c, true);
+    const onStyle = (): void => {
+      // A rule styled through the Style Manager: the selected component's.
+      const sel = this.editor.getSelected?.();
+      if (sel) mark(sel, false);
+    };
+    const evs = 'component:update component:styleUpdate';
+    this.editor.on(evs, onUpdate);
+    this.editor.on('component:update:components', onChildren);
+    this.editor.on('styleable:change', onStyle);
+    this.offs.push(() => {
+      this.editor.off(evs, onUpdate);
+      this.editor.off('component:update:components', onChildren);
+      this.editor.off('styleable:change', onStyle);
+      if (this.writeTimer) clearTimeout(this.writeTimer);
+    });
+  }
+
+  /** Writes the content and the styles of the changed instances back to their components. */
+  async writeBack(): Promise<void> {
+    this.writeTimer = null;
+    const list = [...this.dirtyInstances].filter((i) => !!i.parent());
+    this.dirtyInstances.clear();
+    const css = this.editor.Css as any;
+    const rules = (css.getAll().models as any[]) || [];
+    for (const inst of list) {
+      const master = String(inst.getAttributes()[INSTANCE_ATTR] || '');
+      const key = String(inst.getAttributes().id || '');
+      if (!master || !key || !this.masters.has(master)) continue;
+      const json = JSON.parse(JSON.stringify(inst)) as Json;
+      const back = contentBack(Array.isArray(json.components) ? json.components : [], key);
+      const ids = new Set(Object.keys(back.ids));
+      const classes = new Set<string>();
+      this.subtree(inst).forEach((x) => (x.getClasses() as string[]).forEach((c) => classes.add(c)));
+      const styles: Json[] = [];
+      rules.forEach((r) => {
+        const sels = (r.get('selectors')?.models || []) as any[];
+        const add = String(r.get('selectorsAdd') || '');
+        const rIds = sels.filter((x) => x.get('type') === 2).map((x) => x.get('name') as string);
+        const rCls = sels.filter((x) => x.get('type') !== 2).map((x) => x.get('name') as string);
+        const tag = r.get(RULE_TAG);
+        const mine =
+          r.get(RULE_INSTANCE) === key ||
+          (!tag && !add && rIds.length > 0 && rIds.every((id) => ids.has(id))) ||
+          tag === master ||
+          (!tag && !add && !rIds.length && rCls.length > 0 && rCls.every((c) => classes.has(c)));
+        if (!mine) return;
+        styles.push(ruleBack(JSON.parse(JSON.stringify(r)), back.ids));
+        // From now on the rule is the component's (the next load regenerates it).
+        if (!tag) {
+          r.set(RULE_TAG, master);
+          if (rIds.length) r.set(RULE_INSTANCE, key);
+        }
+      });
+      await this.saveMaster(master, back.components, styles);
+      this.refreshOthers(master, inst);
+    }
+  }
+
+  /** Stores the new content of a component record. */
+  private async saveMaster(id: string, components: Json[], styles: Json[]): Promise<void> {
+    const rec = await this.manager.store.get(id);
+    if (!rec || rec.deleted) return;
+    // Styles: by key, the newest wins (a rule may come from several instances).
+    const byKey = new Map<string, Json>();
+    styles.forEach((r) => byKey.set(ruleKey(r), r));
+    const data = componentProject(components, [...byKey.values()]);
+    if (JSON.stringify(data) === JSON.stringify(rec.data)) return;
+    rec.data = data;
+    rec.updatedAt = Date.now();
+    rec.dirty = true;
+    await this.manager.store.put(rec);
+    this.masters.set(id, masterOf(rec));
+    (this.manager as any).emitChange?.();
+    this.editor.trigger(EVENTS.componentSaved, { id, record: rec });
+  }
+
+  /** The other instances of a component on this page follow its new content. */
+  private refreshOthers(master: string, except: Component): void {
+    const m = this.masters.get(master);
+    const wrapper = this.editor.getWrapper?.();
+    if (!m || !wrapper) return;
+    const others: Component[] = [];
+    const walk = (c: Component): void => {
+      if (c.get('type') === INSTANCE_TYPE && c !== except && c.getAttributes()[INSTANCE_ATTR] === master) others.push(c);
+      else c.components().forEach(walk);
+    };
+    walk(wrapper);
+    if (!others.length) return;
+    const css = this.editor.Css as any;
+    const um = this.editor.UndoManager as any;
+    const run = (): void => {
+      others.forEach((inst) => {
+        const key = String(inst.getAttributes().id || '');
+        const b = buildInstance(m, key, this.masters);
+        // Its old scoped rules go, the new ones come.
+        (css.getAll().models as any[]).filter((r) => r.get(RULE_INSTANCE) === key).forEach((r) => css.remove(r));
+        if (b.scoped.length) css.addCollection(b.scoped);
+        inst.components().reset(b.components as any);
+      });
+    };
+    this.quiet++;
+    try {
+      if (um?.skip) um.skip(run);
+      else run();
+    } finally {
+      this.quiet--;
+    }
   }
 
   /**
@@ -211,7 +346,6 @@ export class ComponentsFeature implements ComponentsApi {
     const target = inst.getAttributes()[INSTANCE_ATTR];
     const m = target ? this.masters.get(target) : undefined;
     if (m) inst.set('name', m.name);
-    this.addToolbarButton(inst);
     if (inst.components().length || !m) return;
     let key = inst.getAttributes().id as string | undefined;
     if (!key) {
@@ -235,21 +369,13 @@ export class ComponentsFeature implements ComponentsApi {
       cur.setStyle({ ...rule.style });
       cur.set(RULE_TAG, m.id);
     });
-    if (toAdd.length) css.addCollection(toAdd);
-    inst.components(b.components as any);
-  }
-
-  private addToolbarButton(inst: Component): void {
-    const add = (): void => {
-      const tb = (inst.get('toolbar') as Json[] | undefined) || [];
-      if (!tb.length || tb.some((b) => b.command === COMMANDS.editComponent)) return;
-      (inst as any).set('toolbar', [
-        { label: TOOLBAR_EDIT, command: COMMANDS.editComponent, attributes: { title: this.t('editComponent') } },
-        ...tb,
-      ]);
-    };
-    // The default toolbar is built after init.
-    setTimeout(add, 0);
+    this.quiet++;
+    try {
+      if (toAdd.length) css.addCollection(toAdd);
+      inst.components(b.components as any);
+    } finally {
+      this.quiet--;
+    }
   }
 
   /* ------------------------------------------------------------------ */

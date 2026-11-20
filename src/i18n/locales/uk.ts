@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Показати все',
   boardFitFrame: 'Вписати цей фрейм',
   boardRefresh: 'Перемалювати',
+  boardLoading: 'Малювання сторінок… %s',
+  boardOpening: 'Відкриваю сторінку…',
   boardPages: 'Сторінки',
   boardData: 'Дані',
   boardLayouts: 'Лейаути',

@@ -53,8 +53,10 @@ describe('the board', () => {
     await s.api.open(home.id);
     await settle(s.api);
     const rendering: string[] = [];
+    const flags: Record<string, string> = {};
     editor.on(EVENTS.rendering, (req: any) => {
       rendering.push(req.record.id);
+      flags[req.record.id] = `${!!req.placeholders}|${!!req.inPlace}`;
       req.waitFor(new Promise((r) => setTimeout(r, 5)));
     });
     const opened: string[] = [];
@@ -67,7 +69,8 @@ describe('the board', () => {
     expect(frame(other.id).querySelector('.gjsp-board__name')!.textContent).toBe('Other');
     // the frames in view are rendered (the plugins load their data first)
     await vi.waitFor(() => expect(frame(other.id).querySelector('iframe')).toBeTruthy(), { timeout: 5000, interval: 20 });
-    expect(rendering).toEqual([other.id]); // the page in the canvas is taken as it is
+    // templates: placeholders; the page in the canvas is taken in place
+    expect(flags).toEqual({ [home.id]: 'true|true', [other.id]: 'true|false' });
     const doc = frame(home.id).querySelector('iframe')!.getAttribute('srcdoc')!;
     expect(doc).toContain('Hello');
     expect(doc).toContain('#title{color:red;}');

@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Prikaži sve',
   boardFitFrame: 'Uklopi ovaj okvir',
   boardRefresh: 'Ponovo iscrtaj',
+  boardLoading: 'Iscrtavanje stranica… %s',
+  boardOpening: 'Otvaram stranicu…',
   boardPages: 'Stranice',
   boardData: 'Podaci',
   boardLayouts: 'Rasporedi',

@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'عرض الكل',
   boardFitFrame: 'ملاءمة هذا الإطار',
   boardRefresh: 'إعادة الرسم',
+  boardLoading: 'رسم الصفحات… %s',
+  boardOpening: 'فتح الصفحة…',
   boardPages: 'الصفحات',
   boardData: 'البيانات',
   boardLayouts: 'التخطيطات',

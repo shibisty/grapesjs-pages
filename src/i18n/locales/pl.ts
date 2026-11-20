@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: 'Pokaż wszystko',
   boardFitFrame: 'Dopasuj tę ramkę',
   boardRefresh: 'Odrysuj',
+  boardLoading: 'Rysowanie stron… %s',
+  boardOpening: 'Otwieranie strony…',
   boardPages: 'Strony',
   boardData: 'Dane',
   boardLayouts: 'Układy',

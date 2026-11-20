@@ -178,6 +178,8 @@ export interface PagesLabels {
   boardFit: string;
   boardFitFrame: string;
   boardRefresh: string;
+  boardLoading: string;
+  boardOpening: string;
   boardPages: string;
   boardData: string;
   boardLayouts: string;

@@ -11,11 +11,13 @@ export const INSTANCE_ATTR = 'data-gjsp-component';
 export const RULE_TAG = 'gjspc';
 /** Marks CSS rules that belong to one instance (its scoped `#id` rules). */
 export const RULE_INSTANCE = 'gjspi';
+/** Marks the content of an instance (the key of its instance): edited in place, written back to the component. */
+export const CONTENT_MARK = 'gjspIn';
 
 /**
- * What makes the content of an instance read-only: it can only be changed in
- * the component itself. `locked` lets clicks go through to the instance, so
- * the instance is what gets selected.
+ * What makes a nested instance (a component inside a component's content)
+ * read-only where it is shown: it is edited in place where it is itself an
+ * instance on a page. `locked` lets clicks go through to the outer content.
  */
 const LOCK: Json = {
   locked: true,
@@ -71,6 +73,48 @@ export function componentProject(components: Json[], styles: Json[]): ProjectDat
 const isInstance = (j: Json): boolean => !!j && j.type === INSTANCE_TYPE;
 const instanceTarget = (j: Json): string | undefined => j?.attributes?.[INSTANCE_ATTR];
 
+/**
+ * The content of an instance back as component content: ids `x-key` are
+ * `x` again, the marks of the instance go, nested instances keep only what
+ * names them (they are rebuilt from their own components). Returns the
+ * content and the id map (instance id → component id).
+ */
+export function contentBack(nodes: Json[], key: string): { components: Json[]; ids: Record<string, string> } {
+  const ids: Record<string, string> = {};
+  const suffix = `-${key}`;
+  const walk = (j: Json): Json => {
+    if (!j || typeof j !== 'object') return j;
+    const out: Json = { ...j };
+    delete out[CONTENT_MARK];
+    const id = out.attributes?.id;
+    if (typeof id === 'string' && id.endsWith(suffix) && id.length > suffix.length) {
+      const back = id.slice(0, -suffix.length);
+      ids[id] = back;
+      out.attributes = { ...out.attributes, id: back };
+    } else if (typeof id === 'string') ids[id] = id;
+    if (isInstance(out)) {
+      LOCK_KEYS.forEach((k) => delete out[k]);
+      out.components = [];
+      return out;
+    }
+    if (Array.isArray(out.components)) out.components = out.components.map(walk);
+    return out;
+  };
+  return { components: clone(nodes).map(walk), ids };
+}
+
+/** A rule (JSON) of an instance as a rule of its component: ids renamed back, the instance tags gone. */
+export function ruleBack(rule: Json, ids: Record<string, string>): Json {
+  const r = clone(rule);
+  delete r[RULE_TAG];
+  delete r[RULE_INSTANCE];
+  r.selectors = (r.selectors || []).map((s: unknown) =>
+    typeof s === 'string' ? renameIds(s, ids) : { ...(s as Json), name: ids[(s as Json).name] || (s as Json).name }
+  );
+  if (r.selectorsAdd) r.selectorsAdd = renameIds(r.selectorsAdd, ids);
+  return r;
+}
+
 /** Every `#id` a selector list mentions. */
 const idsIn = (s: string): string[] => [...s.matchAll(/#([\w-]+)/g)].map((m) => m[1]);
 
@@ -101,8 +145,9 @@ const renameIds = (s: string, map: Record<string, string>): string =>
 
 /**
  * A copy of master content for the instance `key`: every explicit id `x`
- * becomes `x-key` (unique on the page, the same on every load), all nodes
- * are locked, nested instances are expanded too (`seen` stops cycles).
+ * becomes `x-key` (unique on the page, the same on every load); the content
+ * is editable (edits are written back to the component), nested instances
+ * are locked and expanded too (`seen` stops cycles).
  */
 function copyContent(nodes: Json[], key: string, map: Record<string, string>, nested: Json[]): Json[] {
   const walk = (j: Json): Json => {
@@ -119,7 +164,7 @@ function copyContent(nodes: Json[], key: string, map: Record<string, string>, ne
       nested.push(out);
       return out;
     }
-    if (out.type !== 'textnode') Object.assign(out, LOCK);
+    if (out.type !== 'textnode') out[CONTENT_MARK] = key;
     if (Array.isArray(out.components)) out.components = out.components.map(walk);
     return out;
   };
@@ -189,6 +234,7 @@ export function buildInstance(master: Master, key: string, lib: Library, seen: S
 export function unlock(j: Json): Json {
   if (!j || typeof j !== 'object') return j;
   LOCK_KEYS.forEach((k) => delete j[k]);
+  delete j[CONTENT_MARK];
   if (Array.isArray(j.components)) j.components.forEach(unlock);
   return j;
 }

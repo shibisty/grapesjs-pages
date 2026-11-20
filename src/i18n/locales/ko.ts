@@ -140,6 +140,8 @@ const messages: PagesLabels = {
   boardFit: '전체 보기',
   boardFitFrame: '이 프레임에 맞추기',
   boardRefresh: '다시 그리기',
+  boardLoading: '페이지 그리는 중… %s',
+  boardOpening: '페이지 여는 중…',
   boardPages: '페이지',
   boardData: '데이터',
   boardLayouts: '레이아웃',
