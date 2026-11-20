@@ -100,7 +100,7 @@ describe('dialogs of other plugins', () => {
     await tick(5);
     const form = document.querySelector<HTMLFormElement>('.gjsp-props')!;
     const tabs = [...form.querySelectorAll<HTMLButtonElement>('.gjsp-tab')].map((b) => b.textContent);
-    expect(tabs).toEqual(['General', 'Extra']);
+    expect(tabs).toEqual(['General', 'SEO', 'Open Graph', 'Schema.org', 'Extra']);
     click(form.querySelector('.gjsp-tab[data-tab="extra"]')!);
     expect(form.querySelector<HTMLElement>('[data-pane="general"]')!.hidden).toBe(true);
     const extra = form.querySelector<HTMLInputElement>('input[name="extra"]')!;

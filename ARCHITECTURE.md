@@ -131,6 +131,21 @@ Layout { id, siteId, content }   // шаблон со «слотом» под к
 `slug` проверяется на сервере, `title`/SEO-поля редактируются в свойствах
 страницы (можно отдать вкладкой в grapesjs-sidebar-tools).
 
+### 4a. SEO, Open Graph, Schema.org (2.10)
+
+Всё хранится плоскими ключами в `values` записи (как `seo.title` раньше), чтобы сервер читал их без
+разбора: страница — `seo.*`, `og.*`, `twitter.card`, `schema.type`, `schema.props` (объект полей
+типа), `schema.extra` (JSON-LD как текст), `schema.breadcrumbs`; сайт — `site.url`, `site.name`,
+`site.lang`, `seo.title_template`, `seo.description`, `og.image`, `twitter.site`, `org.*`. Значения
+сайта: в remote — `settings` записи сайта, в local — общий ключ `pages.site` в meta `shared` (поэтому
+он попадает в `shared.json` архива). `src/seo/head.ts` — чистые функции без DOM: `seoHead()` (теги
+`<head>`) и `seoJsonLd()` (один `@graph`: WebSite, Organization, узел страницы по типу,
+BreadcrumbList по дереву, дополнительные узлы). Вкладки — обычные секции диалога свойств
+(`ui/seoForm.ts`), идут перед секциями других плагинов. Публикация отправляет `head` (необязательное
+поле `PublishWrite`), архив пишет его в `index.html`. Картинки — через `ui/media.ts` (копия из
+grapesjs-storage): Asset Manager в своём оверлее и `cloud-assets:pick` — оба поверх открытого
+диалога, потому что модалка GrapesJS одна.
+
 ### 5. Несколько вкладок и несколько людей
 
 Сейчас две вкладки браузера с одной страницей молча перезаписывают друг друга.

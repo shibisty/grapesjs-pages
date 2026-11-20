@@ -55,6 +55,8 @@ export const COMMANDS = {
   publish: 'pages-manager:publish',
   revisions: 'pages-manager:revisions',
   properties: 'pages-manager:properties',
+  /** Opens the "SEO of the site" dialog. */
+  siteSeo: 'pages-manager:site-seo',
   refresh: 'pages-manager:refresh',
   /** Opens the export dialog of the site archive. */
   exportArchive: 'pages-manager:export',

@@ -133,6 +133,9 @@ export class RemoteEditor {
     return rec;
   }
 
+  /** The `<head>` tags a page publishes with (SEO, Open Graph, JSON-LD); set by the plugin. */
+  headFor: ((rec: PageRecord) => Promise<string>) | null = null;
+
   /** Markup hooks of other plugins (`hooks.onPublish`), run after the `markup` option. */
   readonly markupHooks: MarkupHook[] = [];
 
@@ -153,7 +156,15 @@ export class RemoteEditor {
     if (!entry && id !== this.manager.activeId) await this.manager.open(id);
     if (id === this.manager.activeId) await this.manager.flush();
     rec = await this.store.pushNow(id);
-    const body = entry ? {} : kind === 'site' ? { css: (await this.publishMarkup(kind, rec)).css } : await this.publishMarkup(kind, rec);
+    const body: { html?: string; css?: string; head?: string } = entry ? {} : kind === 'site' ? { css: (await this.publishMarkup(kind, rec)).css } : await this.publishMarkup(kind, rec);
+    if (kind === 'page' && !entry && this.headFor) {
+      try {
+        const head = await this.headFor(rec);
+        if (head) body.head = head;
+      } catch (e) {
+        report(e);
+      }
+    }
     const res = await this.store.client.publish(kind, kind === 'site' ? SITE_ID : id, body, rec.remote?.version ?? null);
     const next = fromWire({ ...res.record, data: undefined, values: undefined }, kind, rec);
     await this.store.cache.put(next);

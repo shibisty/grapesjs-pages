@@ -5,6 +5,7 @@
 A GrapesJS plugin that turns the editor into a small multi-page site editor:
 
 - **Pages sidebar** — a page tree in both modes: create, edit the properties (name, address, parent, SEO), duplicate, delete and switch pages, drag them into place; a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
+- **SEO, Open Graph, Schema.org** — a page's properties have tabs for the search snippet (title, description, keywords, canonical, noindex/nofollow), social cards (title, description, image from the Asset Manager or the cloud, type, X card) and Schema.org (a type with its fields, FAQ, breadcrumbs, extra JSON-LD); *SEO of the site* keeps the defaults, the title template and the organization. The `<head>` tags and one JSON-LD graph go with a publish (`head`) and into the archive.
 - **Breadcrumbs** — a block that draws the path of the open page in the tree (in the canvas and in the published HTML).
 - **Data records** (with [grapesjs-storage](https://www.npmjs.com/package/grapesjs-storage)) — a page picks a storage template; records under it show its design with their own data.
 - **Local storage** — every page is kept in IndexedDB (or any custom `PageStore`) and autosaved.
@@ -211,6 +212,43 @@ await editor.PagesManager.designOf(id);   // the record whose design it shows
 await editor.PagesManager.pathOf(id);     // the page and its ancestors, root first
 ```
 
+### SEO, Open Graph and Schema.org
+
+A page's properties (✎) have three tabs besides *General*:
+
+- **SEO** — title (with a counter and a search snippet preview), description, keywords, canonical
+  address, *noindex* / *nofollow*.
+- **Open Graph** — title and description for social networks (default: the SEO ones), the image
+  (picked from the editor's **Asset Manager**, from the **cloud** with
+  [grapesjs-cloud-assets](https://www.npmjs.com/package/grapesjs-cloud-assets) 0.11+, or typed), its
+  description, `og:type`, the X (Twitter) card; a card preview. A temporary cloud link (Dropbox,
+  OneDrive, S3) is taken with a warning.
+- **Schema.org** — the type of the page's node (WebPage, AboutPage, ContactPage, CollectionPage,
+  Article, BlogPosting, NewsArticle, Product, Service, Event, FAQPage, LocalBusiness, Organization,
+  Person, or none) with the fields of that type (author and date; brand, SKU, price, currency,
+  availability; dates, place and address; questions and answers; address, phone, hours; profiles),
+  breadcrumbs from the page tree, extra JSON-LD (an object is merged into the node, an array adds
+  nodes) and the resulting graph.
+
+**SEO of the site** (🔍 in the sidebar; remote mode: the site record's properties) keeps the site's
+address (for absolute links), name and language, the title template (`%s | Shop`), the default
+description and image, the X account, and the organization (name, logo, profiles) — the WebSite and
+Organization nodes of every page.
+
+The values are flat keys of `PageRecord.values` (`seo.title`, `og.image`, `schema.type`,
+`schema.props`…; the site's: `site.url`, `seo.title_template`, `org.name`… — remote mode: the site
+record's `settings`, local mode: the shared key `pages.site`). The full list is in
+[`src/seo/head.ts`](./src/seo/head.ts).
+
+What a page gets in `<head>` — `<title>`, `description`, `keywords`, `robots`, `canonical`, `og:*`,
+`twitter:*` and one `<script type="application/ld+json">` with an `@graph` — is:
+
+- sent with a publish as `head` (remote mode, `openapi.v2.yaml`): the server puts it into the page's
+  `<head>` (or builds its own from the same values);
+- in the archive's `index.html` of each page;
+- `await editor.PagesManager.seo.head(id?)` / `seo.jsonLd(id?)`; `seoHead()` and `seoJsonLd()` are
+  exported for servers (no DOM).
+
 ### Breadcrumbs
 
 The *Breadcrumbs* block (`page-breadcrumbs`) is a `<nav class="gjsp-breadcrumbs">` with the path
@@ -328,6 +366,12 @@ components.edit(instanceOrId = selected)
 components.detach(instance = selected): Component | null
 components.insert(id, target?, at?): Component | null
 components.isInstance(component): boolean
+// SEO, Open Graph, Schema.org (both modes)
+seo.head(id = active, { title?, jsonLd? }): Promise<string>   // the <head> tags
+seo.jsonLd(id = active): Promise<object | null>
+seo.site(): Promise<Record<string, unknown>>                   // the site's values
+seo.setSite(values)                                            // null deletes a key
+seo.openSite()                                                 // the "SEO of the site" dialog
 ```
 
 ### Events
@@ -358,6 +402,7 @@ components.isInstance(component): boolean
 `pages-manager:export`, `pages-manager:import` (the archive dialogs); remote mode:
 `pages-manager:publish`, `pages-manager:refresh`, `pages-manager:revisions` and
 `pages-manager:properties` (both take `{ id }`, default the open record);
+`pages-manager:site-seo` (the site's SEO, both modes);
 components: `pages-manager:component-save` (`{ component?, name? }`),
 `pages-manager:component-edit` and `pages-manager:component-detach`
 (`{ component? }`, default the selection).

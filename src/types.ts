@@ -396,4 +396,20 @@ export interface PagesManagerApi {
     /** Changes what a publish (and an archive's `body.html`/`style.css`) gets, after the `remote.markup` option. */
     onPublish(fn: (out: PublishMarkup) => PublishMarkup | void | Promise<PublishMarkup | void>): () => void;
   };
+  /**
+   * SEO, Open Graph and Schema.org (see `src/seo/head.ts` for the value keys).
+   * A page's values are edited in its properties; the site's in "SEO of the site".
+   */
+  seo: {
+    /** The `<head>` tags of a page (the open one by default): title, meta, canonical, Open Graph, X, JSON-LD. */
+    head(id?: string, opts?: { title?: boolean; jsonLd?: boolean }): Promise<string>;
+    /** The Schema.org graph of a page, or null. */
+    jsonLd(id?: string): Promise<Record<string, unknown> | null>;
+    /** The site's values (remote: the site record's; local: the shared key `pages.site`). */
+    site(): Promise<Record<string, unknown>>;
+    /** Changes the site's values (`null` deletes a key). */
+    setSite(values: Record<string, unknown>): Promise<void>;
+    /** Opens the "SEO of the site" dialog. */
+    openSite(): void;
+  };
 }

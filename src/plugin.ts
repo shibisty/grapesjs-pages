@@ -1,9 +1,9 @@
 import type { Editor } from 'grapesjs';
 import { ComponentClipboard } from './clipboard/ComponentClipboard';
 import { isEditorAlive, PagesManager } from './core/PagesManager';
-import { SiteSharedBackend } from './core/SharedData';
+import { SHARED_META, SiteSharedBackend } from './core/SharedData';
 import { COMMANDS, EVENTS } from './events';
-import { createTranslator, registerMessages } from './i18n';
+import { createTranslator, getLocale, registerMessages } from './i18n';
 import { META, publicOptions, resolveOptions } from './options';
 import { definePlugin, registerControl } from './contract';
 import { RemoteClient, SITE_ID } from './remote/RemoteClient';
@@ -19,7 +19,10 @@ import { h, PAGE_ICON_HTML, pageIcon } from './ui/dom';
 import { findHostPanel, findSidebarHost } from './ui/host';
 import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/modals';
 import { BREADCRUMBS_TYPE, registerBreadcrumbs } from './components/breadcrumbs';
-import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal } from './ui/remoteModals';
+import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal, openSectionsModal } from './ui/remoteModals';
+import { pageSeoSections, siteSeoSections, type SeoMedia } from './ui/seoForm';
+import { mediaSources, pickMedia } from './ui/media';
+import { seoHead, seoJsonLd, SITE_SHARED_KEY, type SeoPage } from './seo/head';
 import { Sidebar } from './ui/Sidebar';
 import { createdOrder, type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
@@ -206,7 +209,67 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     return out;
   };
 
-  const propsDeps = { store, update, remote: !!remote };
+  /* ------------------------ SEO, Open Graph, Schema.org ------------------------ */
+
+  const mediaLabels = () => ({ assets: t('fromAssets'), cloud: t('fromCloud'), choose: t('pickChoose'), chooseN: t('pickChooseN'), cancel: t('cancel') });
+  const seoMedia: SeoMedia = {
+    sources: () => mediaSources(editor, mediaLabels()),
+    pick: (source) => {
+      if (opts.injectCss) injectCss();
+      return pickMedia(editor, source, { kind: 'image', labels: mediaLabels(), pfx: 'gjsp', title: source === 'assets' ? t('fromAssets') : undefined });
+    },
+  };
+  /** The site's values: the site record's in remote mode (when there is one), else the shared key of the store's meta. */
+  const siteValues = async (): Promise<Record<string, unknown>> => {
+    if (remote) {
+      const rec = await store.get('site');
+      if (rec && !rec.deleted) return { ...(rec.values || {}) };
+    }
+    const all = (await store.getMeta<Record<string, unknown>>(SHARED_META)) || {};
+    const v = all[SITE_SHARED_KEY];
+    return v && typeof v === 'object' ? { ...(v as Record<string, unknown>) } : {};
+  };
+  const setSiteValues = async (patch: Record<string, unknown>): Promise<void> => {
+    if (remote && (await store.get('site'))) {
+      await remote.update('site', { values: patch });
+      return;
+    }
+    const all = (await store.getMeta<Record<string, unknown>>(SHARED_META)) || {};
+    const cur = { ...((all[SITE_SHARED_KEY] as Record<string, unknown>) || {}) };
+    Object.entries(patch).forEach(([k, v]) => (v === null || v === undefined || v === '' ? delete cur[k] : (cur[k] = v)));
+    await store.setMeta(SHARED_META, { ...all, [SITE_SHARED_KEY]: cur });
+    editor.trigger(EVENTS.change);
+  };
+  const seoPages = async (): Promise<SeoPage[]> => (await store.all()).filter((r) => !r.deleted && (r.kind || 'page') === 'page' && !r.templateId);
+  const seoDeps = { t, media: seoMedia, site: siteValues, pages: seoPages, language: getLocale(editor) };
+  const headInput = async (id?: string) => {
+    const rid = id || manager.activeId || '';
+    const rec = rid ? await store.get(rid) : undefined;
+    if (!rec || rec.deleted) throw new Error(`grapesjs-pages: no record ${rid}`);
+    return { page: rec, site: await siteValues(), pages: await seoPages() };
+  };
+  if (remote) remote.headFor = async (rec) => seoHead({ page: rec, site: await siteValues(), pages: await seoPages() }, { title: true });
+  const openSiteSeo = (): void => {
+    void (async () => {
+      if (opts.injectCss) injectCss();
+      // Remote mode with a site record: its properties (name + the SEO tabs).
+      if (remote && (await store.get('site'))) return openProperties('site');
+      const sections = siteSeoSections(await siteValues(), seoDeps);
+      openSectionsModal(editor, t, t('siteSeo'), sections, (values) => setSiteValues(values));
+    })().catch(report);
+  };
+
+  const propsDeps = {
+    store,
+    update,
+    remote: !!remote,
+    ownSections: (rec: PageRecord) => {
+      const kind = rec.kind || 'page';
+      if (kind === 'site') return siteSeoSections(rec.values || {}, seoDeps);
+      if (kind === 'page' && !rec.templateId) return pageSeoSections(rec, seoDeps);
+      return [];
+    },
+  };
   const openProperties = (id: string): void => void openPropertiesModal(editor, propsDeps, t, id).catch(report);
 
   /**
@@ -361,6 +424,13 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       get: (key) => manager.getShared(key),
       set: (key, value) => manager.setShared(key, value),
     },
+    seo: {
+      head: async (id, o) => seoHead(await headInput(id), o),
+      jsonLd: async (id) => seoJsonLd(await headInput(id)),
+      site: () => siteValues(),
+      setSite: (values) => setSiteValues(values),
+      openSite: () => openSiteSeo(),
+    },
     hooks: {
       onLoad: (fn) => manager.addLoadHook(fn),
       onSave: (fn) => manager.addSaveHook(fn),
@@ -446,6 +516,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       if (remote && id) void openRevisionsModal(editor, remote, t, id).catch(report);
     },
   });
+  editor.Commands.add(COMMANDS.siteSeo, { run: () => openSiteSeo() });
   editor.Commands.add(COMMANDS.properties, {
     run: (_ed: Editor, _s: unknown, o: { id?: string } = {}) => {
       const id = o.id || manager.activeId;
@@ -569,6 +640,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       close: () => editor.stopCommand(COMMANDS.open),
       createKind: (kind) => void createKind(kind).catch(report),
       properties: (id) => openProperties(id),
+      siteSeo: () => openSiteSeo(),
       publish: () => void publish().catch(report),
       revisions: (id) => remote && void openRevisionsModal(editor, remote, t, id).catch(report),
       resolve: (id) => remote && void openConflictModal(editor, remote, t, id).catch(report),

@@ -164,4 +164,73 @@ export interface PagesLabels {
   dataOf: string;
   /** The breadcrumbs component and its block */
   breadcrumbs: string;
+  /* SEO, Open Graph, Schema.org (properties of a page, SEO of the site) */
+  seoKeywords: string;
+  seoCanonical: string;
+  seoNoindex: string;
+  seoNofollow: string;
+  /** %s — length, %s — the recommended maximum */
+  seoChars: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  ogImageAlt: string;
+  ogType: string;
+  twitterCard: string;
+  twitterSmall: string;
+  twitterLarge: string;
+  fromAssets: string;
+  fromCloud: string;
+  /** %s — date and time */
+  tempLink: string;
+  pickChoose: string;
+  /** %s — count */
+  pickChooseN: string;
+  cancel: string;
+  schemaType: string;
+  schemaNone: string;
+  schemaAuthor: string;
+  schemaPublished: string;
+  schemaBrand: string;
+  schemaSku: string;
+  schemaPrice: string;
+  schemaCurrency: string;
+  schemaAvailability: string;
+  inStock: string;
+  outOfStock: string;
+  preOrder: string;
+  schemaStart: string;
+  schemaEnd: string;
+  schemaPlace: string;
+  schemaAddress: string;
+  schemaPhone: string;
+  schemaHours: string;
+  schemaPriceRange: string;
+  schemaArea: string;
+  schemaFaq: string;
+  schemaQuestion: string;
+  schemaAnswer: string;
+  schemaAddQa: string;
+  schemaSameAs: string;
+  schemaBreadcrumbs: string;
+  schemaExtra: string;
+  schemaExtraHint: string;
+  /** %s — the parser error */
+  schemaInvalid: string;
+  schemaPreview: string;
+  siteSeo: string;
+  siteUrl: string;
+  siteUrlHint: string;
+  siteName: string;
+  siteLang: string;
+  titleTemplate: string;
+  /** Mentions %s (the page title placeholder) */
+  titleTemplateHint: string;
+  defaultDescription: string;
+  defaultImage: string;
+  twitterSite: string;
+  organization: string;
+  orgName: string;
+  orgLogo: string;
+  seoDefaultsHint: string;
 }

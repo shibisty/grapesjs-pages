@@ -34,7 +34,7 @@ info:
 
     - **Publishing** sends `editor.getHtml()` (the body''s content, without `<body>`) and `editor.getCss()`; the
     server sanitizes them. An entry (a page with `template_id`) publishes with an empty body; a data record (a page with
-    `data_of`) publishes the markup of its page's design filled with its own data. A layout marks the
+    `data_of`) publishes the markup of its page''s design filled with its own data. A layout marks the
     page''s place with `<page-slot></page-slot>` (or an element with `data-page-slot`).
 
     - Errors are `{"error": "…"}`; invalid input `422` with `{"errors": {"field": ["…"]}}`.
@@ -653,6 +653,15 @@ components:
         css:
           type: string
           maxLength: 1048576
+        head:
+          type: string
+          maxLength: 262144
+          description: 'A page''s `<head>` tags made by the editor from its values and the site''s settings (`seo.*`,
+            `og.*`, `twitter.*`, `schema.*`; the site''s `site.*`, `seo.title_template`, `org.*`): `<title>`, meta
+            description / keywords / robots, the canonical link, Open Graph and X cards, and one
+            `<script type="application/ld+json">` (Schema.org `@graph`). Optional (since grapesjs-site-pages 2.10):
+            a server may put it into the published page''s `<head>` as is (sanitized: only `title`, `meta`, `link
+            rel=canonical` and JSON-LD scripts), or build its own from the same values.'
         data:
           $ref: '#/components/schemas/Project'
     Published:

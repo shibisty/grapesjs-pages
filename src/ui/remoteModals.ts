@@ -45,6 +45,8 @@ export interface PropertiesDeps {
   update(id: string, patch: RecordPatch): Promise<PageRecord | undefined>;
   /** Remote mode: layouts exist. */
   remote: boolean;
+  /** Tabs of the record's own (SEO, Open Graph, Schema.org for a page; the site's SEO for the site). */
+  ownSections?(rec: PageRecord): RecordFormSection[];
 }
 
 /** Sections other plugins add to the "new page" / "properties" dialogs. */
@@ -103,16 +105,12 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
   let slug: HTMLInputElement | null = null;
   let parent: HTMLSelectElement | null = null;
   let layout: HTMLSelectElement | null = null;
-  let seoTitle: HTMLInputElement | null = null;
-  let seoDescription: HTMLTextAreaElement | null = null;
   let inMenu: HTMLInputElement | null = null;
   if (isPage) {
     const v = rec.values || {};
     slug = input('slug', rec.slug || '');
     slug.placeholder = '/about';
     parent = h('select', { class: 'gjsp-select', name: 'parent' }, ...options(t, parentChoices(rec, all), rec.parentId));
-    seoTitle = input('seo.title', String(v['seo.title'] ?? ''));
-    seoDescription = h('textarea', { class: 'gjsp-input', name: 'seo.description', rows: '3' }, String(v['seo.description'] ?? ''));
     inMenu = h('input', { type: 'checkbox', name: 'in_menu', checked: v.in_menu === true });
     fields.push(h('label', {}, t('slug'), slug), h('label', {}, t('parent'), parent));
     if (deps.remote) {
@@ -120,13 +118,9 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
       layout = h('select', { class: 'gjsp-select', name: 'layout' }, ...options(t, layouts, rec.layoutId));
       fields.push(h('label', {}, t('layout'), layout));
     }
-    fields.push(
-      h('label', {}, t('seoTitle'), seoTitle),
-      h('label', {}, t('seoDescription'), seoDescription),
-      h('label', { class: 'gjsp-check' }, inMenu, ' ', t('inMenu'))
-    );
+    fields.push(h('label', { class: 'gjsp-check' }, inMenu, ' ', t('inMenu')));
   }
-  const sections = formSections(editor, { mode: 'edit', record: { ...rec } });
+  const sections = [...(deps.ownSections?.({ ...rec }) || []), ...formSections(editor, { mode: 'edit', record: { ...rec } })];
   const msg = errBox();
   const save = async (): Promise<void> => {
     try {
@@ -140,8 +134,6 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
               parentId: parent!.value || null,
               ...(layout ? { layoutId: layout.value || null } : {}),
               values: {
-                'seo.title': seoTitle!.value.trim(),
-                'seo.description': seoDescription!.value.trim(),
                 in_menu: inMenu!.checked ? true : null,
                 ...extra.values,
               },
@@ -325,5 +317,43 @@ export async function openConflictModal(editor: Editor, remote: RemoteEditor, t:
     closeBtn(editor, t)
   );
   editor.Modal.open({ title: `${t('conflict')}: ${rec.name}`, content });
+  return content;
+}
+
+/**
+ * A dialog of form sections alone (the site's SEO in local mode, where the
+ * site has no record): tabs, Save, Close.
+ */
+export function openSectionsModal(editor: Editor, t: Translator, title: string, sections: RecordFormSection[], save: (values: Record<string, unknown>) => Promise<void>): HTMLElement {
+  const msg = errBox();
+  const submit = async (): Promise<void> => {
+    try {
+      const extra = await runSections(sections);
+      if (extra.error) return showErr(msg, new Error(extra.error));
+      await save(extra.values);
+      editor.Modal.close();
+    } catch (e) {
+      showErr(msg, e);
+    }
+  };
+  const [first, ...rest] = sections;
+  const content = h(
+    'form',
+    {
+      class: 'gjsp-modal gjsp-props gjsp-sections',
+      onsubmit: (e: Event) => {
+        e.preventDefault();
+        void submit();
+      },
+    },
+    ...(first ? tabbed(t, [first.el], rest) : []),
+    msg,
+    h('button', { class: 'gjsp-primary', type: 'submit', 'data-role': 'save' }, t('save')),
+    closeBtn(editor, t)
+  );
+  // The first section is the "general" pane: its tab is named after it.
+  const firstTab = content.querySelector<HTMLButtonElement>('.gjsp-tab[data-tab="general"]');
+  if (firstTab && first) firstTab.textContent = first.label;
+  editor.Modal.open({ title, content: h('div', {}, content) });
   return content;
 }

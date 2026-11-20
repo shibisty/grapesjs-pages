@@ -1,3 +1,4 @@
+import { mediaCss } from './media';
 export const STYLE_ID = 'gjsp-style';
 
 export const CSS = `
@@ -77,12 +78,45 @@ export const CSS = `
 .gjsp-component-bar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gjsp-component-back{flex-shrink:0;border:0;border-radius:10px;padding:3px 9px;background:rgba(0,0,0,.25);color:inherit;font:inherit;cursor:pointer}
 .gjsp-component-back:hover{background:rgba(0,0,0,.4)}
+.gjsp-seo{max-width:640px}
+.gjsp-seo-field{display:block;margin:0 0 2px}
+.gjsp-seo-label{display:block;font-size:12px;opacity:.85}
+.gjsp-seo-hint{display:block;font-size:11px;opacity:.6;margin:-6px 0 10px}
+p.gjsp-seo-hint{margin:0 0 10px}
+.gjsp-seo-count{display:block;text-align:end;font-size:11px;opacity:.6;margin:-8px 0 8px}
+.gjsp-seo-count.is-over{color:#ff8a80;opacity:1}
+.gjsp-seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.gjsp-seo-row{display:flex;flex-wrap:wrap;gap:4px;margin:-4px 0 10px}
+.gjsp-seo-row .gjsp-secondary{margin:0;padding:5px 10px}
+.gjsp-seo-media .gjsp-input{margin-bottom:6px}
+.gjsp-seo-thumb{display:block;max-width:100%;max-height:120px;object-fit:contain;border-radius:3px;margin:4px 0;background:rgba(255,255,255,.06)}
+.gjsp-seo-thumb[hidden]{display:none}
+.gjsp-seo-warn{color:#ffb74d;font-size:12px;margin:-4px 0 10px}
+.gjsp-seo-warn[hidden]{display:none}
+.gjsp-seo-err{display:block;color:#ff8a80;font-size:12px;margin:-6px 0 8px}
+.gjsp-seo-snippet,.gjsp-seo-card{background:#fff;color:#202124;border-radius:6px;padding:10px 12px;margin:0 0 12px;font-family:Arial,sans-serif;max-width:600px}
+.gjsp-seo-snippet-url{font-size:12px;color:#4d5156;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-seo-snippet-title{font-size:18px;color:#1a0dab;line-height:1.3;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-seo-snippet-desc{font-size:13px;line-height:1.45;color:#4d5156;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gjsp-seo-card{padding:0;overflow:hidden;border:1px solid #dadde1}
+.gjsp-seo-card-img{display:block;width:100%;aspect-ratio:1.91/1;object-fit:cover;background:#e4e6eb}
+.gjsp-seo-card-img.is-empty{aspect-ratio:auto;height:44px}
+.gjsp-seo-card-host,.gjsp-seo-card-title,.gjsp-seo-card-desc{padding:0 12px}
+.gjsp-seo-card-host{font-size:12px;color:#606770;text-transform:uppercase;padding-top:8px}
+.gjsp-seo-card-title{font-size:16px;font-weight:600;color:#1d2129;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-seo-card-desc{font-size:13px;color:#606770;padding-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-seo-qa{display:grid;grid-template-columns:1fr auto;gap:0 6px;align-items:start;border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:6px 6px 0;margin-bottom:6px}
+.gjsp-seo-qa textarea{grid-column:1}
+.gjsp-seo-qa .gjsp-act{grid-row:1;grid-column:2}
+.gjsp-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.gjsp-seo-out summary{cursor:pointer;opacity:.85;margin:4px 0}
+.gjsp-seo-ld{max-height:260px;overflow:auto;background:rgba(0,0,0,.25);padding:8px;border-radius:3px;white-space:pre-wrap;word-break:break-word;margin:4px 0 10px}
 `;
 
 export function injectCss(doc: Document = document): void {
   if (doc.getElementById(STYLE_ID)) return;
   const s = doc.createElement('style');
   s.id = STYLE_ID;
-  s.textContent = CSS;
+  s.textContent = CSS + mediaCss('gjsp');
   doc.head.appendChild(s);
 }

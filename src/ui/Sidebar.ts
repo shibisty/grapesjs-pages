@@ -19,6 +19,8 @@ export interface SidebarActions {
   redo(): void;
   sync(): void;
   settings(): void;
+  /** SEO of the site (defaults, Open Graph, organization). */
+  siteSeo?(): void;
   close(): void;
   /* remote mode */
   createKind?(kind: RecordKind): void;
@@ -51,7 +53,7 @@ export class Sidebar {
   private readonly status: HTMLDivElement;
   private readonly list: HTMLUListElement;
   private readonly btn: Record<
-    'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'exportArchive' | 'importArchive' | 'settings' | 'close',
+    'undo' | 'redo' | 'create' | 'publish' | 'revisions' | 'sync' | 'exportArchive' | 'importArchive' | 'siteSeo' | 'settings' | 'close',
     HTMLButtonElement
   >;
   private localCount = 0;
@@ -82,6 +84,7 @@ export class Sidebar {
       sync: tool('⟳', () => actions.sync()),
       exportArchive: tool('⤓', () => actions.exportArchive?.()),
       importArchive: tool('⤒', () => actions.importArchive?.()),
+      siteSeo: tool('🔍', () => actions.siteSeo?.()),
       settings: tool('⚙', () => actions.settings()),
       close: tool('✕', () => actions.close()),
     };
@@ -128,6 +131,7 @@ export class Sidebar {
           // no server settings (the host page sets the server).
           ...(Object.keys(this.btn) as (keyof typeof this.btn)[])
             .filter((k) => (remote ? k !== 'settings' : k !== 'publish' && k !== 'revisions'))
+            .filter((k) => k !== 'siteSeo' || !!actions.siteSeo)
             .map((k) => this.btn[k])
         )
       ),
@@ -187,6 +191,7 @@ export class Sidebar {
       sync: this.remote ? t('refresh') : t('sync'),
       exportArchive: t('exportArchive'),
       importArchive: t('importArchive'),
+      siteSeo: t('siteSeo'),
       settings: t('settings'),
       close: t('close'),
     };

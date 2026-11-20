@@ -1,3 +1,4 @@
+import { seoHead, SITE_KEYS, SITE_SHARED_KEY } from '../seo/head';
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import type { ProjectData, RecordKind } from '../types';
 
@@ -151,19 +152,20 @@ export function compose(layoutHtml: string | undefined, pageHtml: string): strin
 /** `../` back to the archive root from a folder. */
 const up = (dir: string): string => '../'.repeat(dir.split('/').length);
 
-function previewDoc(rec: ArchiveRecord, dir: string, layout: ArchiveRecord | undefined, layoutDir: string | undefined): string {
+function previewDoc(rec: ArchiveRecord, dir: string, layout: ArchiveRecord | undefined, layoutDir: string | undefined, site: Record<string, unknown>, all: ArchiveRecord[]): string {
   const root = up(dir);
   const links = [`<link rel="stylesheet" href="${root}site/style.css">`];
   if (layout?.css != null && layoutDir) links.push(`<link rel="stylesheet" href="${root}${layoutDir}/style.css">`);
   links.push('<link rel="stylesheet" href="style.css">');
-  const title = String(rec.values?.['seo.title'] || rec.name || '');
+  const lang = String(site[SITE_KEYS.lang] || '').split(/[-_]/)[0];
+  const head = (rec.kind || 'page') === 'page' ? seoHead({ page: rec, site, pages: all.filter((r) => (r.kind || 'page') === 'page') }) : `<title>${escapeHtml(String(rec.name || ''))}</title>`;
   return [
     '<!doctype html>',
-    '<html>',
+    lang ? `<html lang="${escapeHtml(lang)}">` : '<html>',
     '<head>',
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    `<title>${escapeHtml(title)}</title>`,
+    head,
     ...links,
     '</head>',
     '<body>',
@@ -183,6 +185,9 @@ export function archiveFiles(
 ): Record<string, string> {
   const dirs = recordDirs(records);
   const byId = new Map(records.map((r) => [r.id, r]));
+  // The site's SEO values: the site record's (remote mode), or the shared key of local mode.
+  const siteRec = records.find((r) => r.kind === 'site');
+  const siteValues = (siteRec?.values || (meta.shared?.[SITE_SHARED_KEY] as Record<string, unknown> | undefined) || {}) as Record<string, unknown>;
   const files: Record<string, string> = {};
   const entries: ManifestEntry[] = [];
   {
@@ -211,7 +216,7 @@ export function archiveFiles(
         files[`${dir}/style.css`] = css;
         e.hash = { html: contentHash(html), css: contentHash(css) };
         const layout = kind === 'page' && r.layoutId ? byId.get(r.layoutId) : undefined;
-        if (kind !== 'layout') files[`${dir}/index.html`] = previewDoc(r, dir, layout, layout && dirs.get(layout.id));
+        if (kind !== 'layout') files[`${dir}/index.html`] = previewDoc(r, dir, layout, layout && dirs.get(layout.id), siteValues, records);
       }
       if (kind === 'template' && r.fields) files[`${dir}/fields.json`] = json(r.fields);
       entries.push(e);
