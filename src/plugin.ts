@@ -4,7 +4,8 @@ import { isEditorAlive, PagesManager } from './core/PagesManager';
 import { SiteSharedBackend } from './core/SharedData';
 import { COMMANDS, EVENTS } from './events';
 import { createTranslator, registerMessages } from './i18n';
-import { resolveOptions } from './options';
+import { META, publicOptions, resolveOptions } from './options';
+import { definePlugin, registerControl } from './contract';
 import { RemoteClient, SITE_ID } from './remote/RemoteClient';
 import { type MarkupHook, RemoteEditor } from './remote/RemoteEditor';
 import { RemotePageStore } from './remote/RemotePageStore';
@@ -47,11 +48,12 @@ export function getPagesManager(editor: Editor): PagesManagerApi | undefined {
  * per-page undo/redo, copy/paste of components between pages and manual
  * REST sync.
  */
-export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
+function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   const ed = editor as EditorWithPages;
   ed.__gjspCleanup?.(); // applied twice to the same editor: replace the old instance
 
   const opts = resolveOptions(userOpts);
+  const offControl = registerControl(editor, META, () => publicOptions(opts), () => undefined);
   registerMessages(editor);
   const t = createTranslator(editor, opts.labels);
   // Remote mode: the server first, an IndexedDB cache (one per server URL).
@@ -443,6 +445,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
   const cleanup = (): void => {
     if (disposed) return;
     disposed = true;
+    offControl();
     disconnectWorkspace();
     components.destroy();
     manager.destroy();
@@ -592,3 +595,7 @@ export default function pagesPlugin(editor: Editor, userOpts: PagesOptions = {})
     start().catch(report);
   });
 }
+
+definePlugin(pagesPlugin, META);
+
+export default pagesPlugin;

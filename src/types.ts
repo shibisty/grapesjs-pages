@@ -181,6 +181,8 @@ export interface PagesOptions {
   /** Id of the panel that gets the "Pages" button. Auto-detected when null. */
   panelId?: string | null;
   /** CSS selector of the element the sidebar is mounted into. Auto-detected when null. */
+  container?: string | null;
+  /** Older name of `container`. */
   sidebarContainer?: string | null;
   /** Inject the plugin CSS into `document.head`. */
   injectCss?: boolean;
@@ -200,7 +202,7 @@ export interface PagesOptions {
   archiveName?: string | (() => string);
 }
 
-export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'labels' | 'remote'>> {
+export interface ResolvedOptions extends Required<Omit<PagesOptions, 'keys' | 'labels' | 'remote' | 'container'>> {
   remote: RemoteOptions | null;
   keys: KeyBindings;
   labels: Partial<PagesLabels>;

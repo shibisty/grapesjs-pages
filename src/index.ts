@@ -4,7 +4,7 @@ export default pagesPlugin;
 export { pagesPlugin };
 export { getPagesManager, PANEL_BUTTON_ID } from './plugin';
 export { EVENTS, COMMANDS } from './events';
-export { DEFAULT_OPTIONS, DEFAULT_KEYS, resolveOptions } from './options';
+export { DEFAULT_OPTIONS, DEFAULT_KEYS, resolveOptions, META, VERSION } from './options';
 export { locales, SUPPORTED_LOCALES, I18N_NS } from './i18n';
 export type { PagesLabels } from './i18n';
 export { IndexedDbPageStore } from './store/IndexedDbPageStore';

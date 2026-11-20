@@ -1,3 +1,4 @@
+import type { PluginMeta } from './contract';
 import type { KeyBindings, PagesOptions, ResolvedOptions } from './types';
 
 export const DEFAULT_KEYS: KeyBindings = {
@@ -56,12 +57,77 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
     blank: o.blank ?? null,
     headers: typeof o.headers === 'function' ? o.headers : null,
     panelId: o.panelId ?? null,
-    sidebarContainer: o.sidebarContainer ?? null,
+    sidebarContainer: o.container ?? o.sidebarContainer ?? null,
     keys,
     labels: { ...(o.labels || {}) },
     remote: o.remote && typeof o.remote.url === 'string' && o.remote.url.trim() ? { ...o.remote } : null,
     // A custom element name: lower case with a dash.
     archiveName: typeof o.archiveName === 'string' || typeof o.archiveName === 'function' ? o.archiveName : '',
     slotTag: typeof o.slotTag === 'string' && TAG_RE.test(o.slotTag) ? o.slotTag : DEFAULT_OPTIONS.slotTag,
+  };
+}
+
+export const PLUGIN_ID = 'grapesjs-site-pages';
+/** Version of this package (a test checks it against package.json). */
+export const VERSION = '2.8.0';
+
+/** Options for forms (plugin contract). Changes apply after a reload. */
+export const META: PluginMeta = {
+  id: PLUGIN_ID,
+  version: VERSION,
+  title: 'Site Pages',
+  description: 'Pages, layouts, templates and linked components; local storage or a server.',
+  options: [
+    {
+      key: 'remote',
+      type: 'json',
+      default: null,
+      title: 'Server (remote mode)',
+      description: '{ "url": "/admin/cms/editor" } — the server keeps the site; null — local pages with manual sync.',
+    },
+    { key: 'serverUrl', type: 'string', default: '', title: 'Sync server (local mode)', description: 'REST API v1 for manual sync; also set in the panel.' },
+    { key: 'autosaveDelay', type: 'number', default: DEFAULT_OPTIONS.autosaveDelay, title: 'Autosave delay, ms' },
+    { key: 'historyLimit', type: 'number', default: DEFAULT_OPTIONS.historyLimit, title: 'Undo steps per page' },
+    { key: 'workspaceTabs', type: 'boolean', default: true, title: 'Pages as workspace tabs', description: 'With grapesjs-sidebar-tools.' },
+    { key: 'takeOverCopyPaste', type: 'boolean', default: true, title: 'Copy/paste between pages' },
+    { key: 'keys', type: 'json', default: { ...DEFAULT_KEYS }, title: 'Shortcuts', advanced: true },
+    { key: 'slotTag', type: 'string', default: DEFAULT_OPTIONS.slotTag, title: 'Layout slot tag', advanced: true },
+    { key: 'archiveName', type: 'string', default: '', title: 'Archive file name', description: 'Without .zip; empty — site name and date.', advanced: true },
+    { key: 'dbName', type: 'string', default: DEFAULT_OPTIONS.dbName, title: 'IndexedDB database', advanced: true },
+    { key: 'settleMs', type: 'number', default: DEFAULT_OPTIONS.settleMs, title: 'Settle time after load, ms', advanced: true },
+    { key: 'panelId', type: 'string', default: '', title: 'Panel of the "Pages" button', description: 'Empty — auto.', advanced: true },
+    { key: 'container', type: 'string', default: '', title: 'Sidebar container (CSS selector)', description: 'Empty — auto.', aliases: ['sidebarContainer'], advanced: true },
+    { key: 'labels', type: 'json', default: {}, title: 'Texts', advanced: true },
+    { key: 'injectCss', type: 'boolean', default: true, title: 'Inject CSS', advanced: true },
+  ],
+};
+
+/** The options a form can show (no functions or stores). */
+export function publicOptions(o: ResolvedOptions): Record<string, unknown> {
+  const r = o.remote;
+  return {
+    remote: r
+      ? {
+          url: r.url,
+          ...(r.credentials ? { credentials: r.credentials } : {}),
+          ...(r.refreshInterval !== undefined ? { refreshInterval: r.refreshInterval } : {}),
+          ...(r.retryDelay !== undefined ? { retryDelay: r.retryDelay } : {}),
+          ...(r.cacheDbName ? { cacheDbName: r.cacheDbName } : {}),
+        }
+      : null,
+    serverUrl: o.serverUrl,
+    autosaveDelay: o.autosaveDelay,
+    historyLimit: o.historyLimit,
+    workspaceTabs: o.workspaceTabs,
+    takeOverCopyPaste: o.takeOverCopyPaste,
+    keys: { ...o.keys },
+    slotTag: o.slotTag,
+    archiveName: typeof o.archiveName === 'string' ? o.archiveName : '',
+    dbName: o.dbName,
+    settleMs: o.settleMs,
+    panelId: o.panelId || '',
+    container: o.sidebarContainer || '',
+    labels: { ...o.labels },
+    injectCss: o.injectCss,
   };
 }

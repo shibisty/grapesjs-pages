@@ -434,6 +434,20 @@ End to end against a real contract v2 server (skipped without the URL):
 GJSP_E2E_URL=http://localhost:8082/v1/editor GJSP_E2E_HEADERS='{"X-API-Key":"sk_live_…"}' npx vitest run test/e2e.test.ts
 ```
 
+
+## Using it by name and changing options in the editor
+
+This plugin follows the plugin contract of grapesjs-plugins-manager (its `docs/plugin-contract.md`): with the UMD bundle on the page it registers itself as `grapesjs-site-pages`, so it can be listed like an official plugin —
+
+```js
+grapesjs.init({
+  plugins: ['grapesjs-site-pages'],
+  pluginsOpts: { 'grapesjs-site-pages': { /* options */ } },
+});
+```
+
+— and grapesjs-plugins-manager shows a form of its options (⚙ in the plugin list). The plugin function carries `meta` (id, version, option schema).
+
 ## License
 
 MIT
