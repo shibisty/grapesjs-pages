@@ -186,7 +186,8 @@ export class ComponentsFeature implements ComponentsApi {
           name: 'Component',
           droppable: false,
           editable: false,
-          traits: [],
+          // Component settings: what it is linked to, Edit, Detach (see ui/settings.ts).
+          traits: [{ type: 'gjsp-instance', name: 'gjsp-instance', changeProp: true }],
         },
         init(this: Component) {
           feature.initInstance(this);

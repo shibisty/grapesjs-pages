@@ -87,6 +87,14 @@ On the first start (empty store) the current editor content — `components`,
 | `archiveName` | `string \| () => string` | site name + date | File name (without `.zip`) of a downloaded site archive. |
 | `workspaceTabs` | `boolean` | `true` | With [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-tools) 2.2+: every opened page gets a tab in its document tab bar (see below). |
 
+## Component settings
+
+GrapesJS's **Component settings** (Trait Manager) get:
+
+- **the body** — the open record's properties: name, address, parent, menu, the SEO / Open Graph / Schema.org tabs and the sections of other plugins (e.g. grapesjs-storage's template), with Save. The properties dialog stays;
+- **breadcrumbs** — separator, the first item's text (e.g. "Home"), show the current page; kept with the component;
+- **a linked component** — what it is linked to, *Edit component*, *Detach*.
+
 ## Page tabs (grapesjs-sidebar-tools)
 
 When [grapesjs-sidebar-tools](https://www.npmjs.com/package/grapesjs-sidebar-tools) 2.2+ is installed (before or after this plugin), every page you open gets a tab in its document tab bar above the canvas:

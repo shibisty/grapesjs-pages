@@ -111,6 +111,21 @@ p.gjsp-seo-hint{margin:0 0 10px}
 .gjsp-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
 .gjsp-seo-out summary{cursor:pointer;opacity:.85;margin:4px 0}
 .gjsp-seo-ld{max-height:260px;overflow:auto;background:rgba(0,0,0,.25);padding:8px;border-radius:3px;white-space:pre-wrap;word-break:break-word;margin:4px 0 10px}
+.gjsp-trait{width:100%;padding:4px 2px 8px;box-sizing:border-box;text-align:start;font-size:12px}
+.gjsp-trait__head{display:flex;align-items:center;gap:6px;margin:0 0 8px}
+.gjsp-trait__title{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-trait__btns{display:flex;flex-wrap:wrap;gap:6px}
+.gjsp-trait__btns button{margin:0;padding:5px 10px}
+.gjsp-trait .gjsp-primary{color:#fff}
+.gjsp-trait__ok{margin-inline-start:6px;color:#81c784}
+.gjsp-props--trait label{display:block}
+.gjsp-props--trait .gjsp-select{width:100%;box-sizing:border-box;padding:6px 8px;margin:4px 0 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:3px}
+.gjsp-props--trait .gjsp-tabs{flex-wrap:wrap}
+.gjs-trt-trait:has(.gjsp-trait){display:block;padding:0 10px}
+.gjs-field:has(>.gjsp-trait){background:none;padding:0;border:0;box-shadow:none}
+.gjsp-trait input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),.gjsp-trait select,.gjsp-trait textarea{width:100%;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.2);color:inherit;padding:5px 8px;border-radius:3px;box-sizing:border-box;font:inherit}
+.gjsp-trait input[type=checkbox],.gjsp-trait input[type=radio]{appearance:auto;-webkit-appearance:auto;display:inline-block;width:auto;height:auto;margin:0 6px 0 0;vertical-align:middle}
+.gjsp-trait select option{color:#222}
 `;
 
 export function injectCss(doc: Document = document): void {

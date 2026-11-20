@@ -164,6 +164,10 @@ export interface PagesLabels {
   dataOf: string;
   /** The breadcrumbs component and its block */
   breadcrumbs: string;
+  /** Traits of the breadcrumbs. */
+  bcSeparator: string;
+  bcHome: string;
+  bcCurrent: string;
   /* SEO, Open Graph, Schema.org (properties of a page, SEO of the site) */
   seoKeywords: string;
   seoCanonical: string;

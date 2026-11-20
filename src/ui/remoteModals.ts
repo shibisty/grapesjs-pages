@@ -95,6 +95,25 @@ function tabbed(t: Translator, main: HTMLElement[], sections: RecordFormSection[
  * page's data as a tab of its own.
  */
 export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, t: Translator, id: string): Promise<HTMLElement | null> {
+  const made = await propertiesForm(editor, deps, t, id, { onSaved: () => editor.Modal.close(), extra: [closeBtn(editor, t)] });
+  if (!made) return null;
+  // Wrapped: GrapesJS' modal appends through cash-dom, which takes a <form>
+  // for a list of its controls and would insert them one by one.
+  editor.Modal.open({ title: `${t('properties')}: ${made.record.name}`, content: h('div', {}, made.form) });
+  return made.form;
+}
+
+/**
+ * The properties form of a record (the dialog's, and the body's in
+ * Component settings): header fields, the sections of other plugins, Save.
+ */
+export async function propertiesForm(
+  editor: Editor,
+  deps: PropertiesDeps,
+  t: Translator,
+  id: string,
+  o: { onSaved?(rec: PageRecord): void; extra?: HTMLElement[]; className?: string } = {}
+): Promise<{ form: HTMLFormElement; record: PageRecord } | null> {
   const rec = await deps.store.get(id);
   if (!rec || rec.deleted) return null;
   const all = await deps.store.all();
@@ -143,7 +162,7 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
             : {}),
       });
       for (const s of sections) await s.save?.(next || rec);
-      editor.Modal.close();
+      o.onSaved?.(next || rec);
     } catch (e) {
       showErr(msg, e);
     }
@@ -151,7 +170,7 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
   const content = h(
     'form',
     {
-      class: 'gjsp-modal gjsp-props',
+      class: o.className || 'gjsp-modal gjsp-props',
       onsubmit: (e: Event) => {
         e.preventDefault();
         void save();
@@ -160,12 +179,9 @@ export async function openPropertiesModal(editor: Editor, deps: PropertiesDeps, 
     ...tabbed(t, fields, sections),
     msg,
     h('button', { class: 'gjsp-primary', type: 'submit', 'data-role': 'save' }, t('save')),
-    closeBtn(editor, t)
+    ...(o.extra || [])
   );
-  // Wrapped: GrapesJS' modal appends through cash-dom, which takes a <form>
-  // for a list of its controls and would insert them one by one.
-  editor.Modal.open({ title: `${t('properties')}: ${rec.name}`, content: h('div', {}, content) });
-  return content;
+  return { form: content, record: rec };
 }
 
 /**

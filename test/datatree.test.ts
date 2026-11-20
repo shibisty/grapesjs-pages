@@ -149,6 +149,58 @@ describe('breadcrumbs', () => {
     expect(child.id).toBeTruthy();
     expect((editor.BlockManager as any).get('page-breadcrumbs')).toBeTruthy();
   });
+
+  it('options (traits): separator, the first item\'s text, without the current page', async () => {
+    expect(breadcrumbsHtml([{ name: 'Home', slug: '/' } as any, { name: 'A', slug: '/a' } as any, { name: 'B' } as any], { separator: '›', home: 'Start', current: false })).toBe(
+      '<ol><li><a href="/">Start</a></li><li><span class="gjsp-bc-sep" aria-hidden="true">›</span><a href="/a">A</a></li></ol>'
+    );
+    const s = await createEditor();
+    editor = s.editor;
+    const [home] = await s.api.list();
+    await s.api.update(home.id, { slug: '/' });
+    await s.api.create({ name: 'News', parentId: home.id });
+    await settle(s.api);
+    const bc = editor.getWrapper()!.append({ type: BREADCRUMBS_TYPE })[0] as any;
+    await tick(20);
+    expect(bc.get('traits').map((x: any) => x.get('name'))).toEqual(['separator', 'home', 'current']);
+    bc.set({ separator: '»', home: 'Home' });
+    expect(bc.getEl().innerHTML).toContain('>Home</a>');
+    expect(bc.getEl().innerHTML).toContain('gjsp-bc-sep" aria-hidden="true">»</span>');
+    expect(bc.getAttributes()['data-gjsp-sep']).toBe('');
+    bc.set('current', false);
+    expect(editor.getHtml()).not.toContain('aria-current');
+    // kept in the project, the trail itself is not
+    const json = JSON.stringify(editor.getProjectData());
+    expect(json).toContain('"separator":"»"');
+    expect(json).not.toContain('aria-hidden');
+  });
+});
+
+describe('Component settings', () => {
+  it('the body shows the open page\'s properties and saves them', async () => {
+    const s = await createEditor();
+    editor = s.editor;
+    const [home] = await s.api.list();
+    await settle(s.api);
+    const w: any = editor.getWrapper();
+    await tick(10);
+    const trait = w.getTrait('gjsp-page');
+    expect(trait).toBeTruthy();
+    const View = (editor.TraitManager as any).getType('gjsp-page');
+    const view = new View({ model: trait, editor: (editor as any).getModel() });
+    document.body.appendChild(view.render().el);
+    const el = view.el as HTMLElement;
+    for (let i = 0; i < 50 && !el.querySelector('input[name="name"]'); i++) await tick(2);
+    const name = el.querySelector<HTMLInputElement>('input[name="name"]')!;
+    expect(name.value).toBe(home.name);
+    expect(el.querySelector('input[name="slug"]')).toBeTruthy();
+    name.value = 'Start';
+    el.querySelector<HTMLButtonElement>('[data-role="save"]')!.click();
+    for (let i = 0; i < 50 && (await s.store.get(home.id))!.name !== 'Start'; i++) await tick(2);
+    expect((await s.store.get(home.id))!.name).toBe('Start');
+    expect(el.isConnected).toBe(true); // no dialog to close
+    el.remove();
+  });
 });
 
 describe('remote wire', () => {

@@ -19,7 +19,9 @@ import { h, PAGE_ICON_HTML, pageIcon } from './ui/dom';
 import { findHostPanel, findSidebarHost } from './ui/host';
 import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/modals';
 import { BREADCRUMBS_TYPE, registerBreadcrumbs } from './components/breadcrumbs';
-import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal, openSectionsModal } from './ui/remoteModals';
+import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal, propertiesForm, openSectionsModal } from './ui/remoteModals';
+import { registerPageSettings } from './ui/settings';
+import { INSTANCE_ATTR, INSTANCE_TYPE } from './components/expand';
 import { pageSeoSections, siteSeoSections, type SeoMedia } from './ui/seoForm';
 import { mediaSources, pickMedia } from './ui/media';
 import { seoHead, seoJsonLd, SITE_SHARED_KEY, type SeoPage } from './seo/head';
@@ -271,6 +273,23 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     },
   };
   const openProperties = (id: string): void => void openPropertiesModal(editor, propsDeps, t, id).catch(report);
+
+  // Component settings: the body — the open page's properties; a linked component — Edit / Detach.
+  offs.push(
+    registerPageSettings(editor, {
+      t,
+      activeId: () => manager.activeId,
+      form: async (id, onSaved) => (await propertiesForm(editor, propsDeps, t, id, { onSaved, className: 'gjsp-props gjsp-props--trait' }))?.form || null,
+      instance: (c) => {
+        if (c.get('type') !== INSTANCE_TYPE) return null;
+        const m = components.list().find((x) => x.id === c.getAttributes()[INSTANCE_ATTR]);
+        return { name: m?.name || String(c.get('name') || '') };
+      },
+      edit: (c) => void components.edit(c).catch(report),
+      detach: (c) => void components.detach(c),
+      css: () => opts.injectCss && injectCss(),
+    })
+  );
 
   /**
    * A new page. When other plugins add sections to the dialog (e.g.
@@ -526,7 +545,12 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
 
   // Breadcrumbs: drawn from the path of the open record in the page tree.
   let crumbPath: PageRecord[] = [];
-  const crumbs = registerBreadcrumbs(editor, { path: () => crumbPath, label: () => t('breadcrumbs'), category: () => t('pages') });
+  const crumbs = registerBreadcrumbs(editor, {
+    path: () => crumbPath,
+    label: () => t('breadcrumbs'),
+    category: () => t('pages'),
+    labels: () => ({ separator: t('bcSeparator'), home: t('bcHome'), current: t('bcCurrent') }),
+  });
   const refreshCrumbs = (): void => {
     const id = manager.activeId;
     void (id ? pathOf(id) : Promise.resolve([] as PageRecord[]))
