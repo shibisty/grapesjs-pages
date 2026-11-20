@@ -69,7 +69,7 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
 
 export const PLUGIN_ID = 'grapesjs-site-pages';
 /** Version of this package (a test checks it against package.json). */
-export const VERSION = '2.8.0';
+export const VERSION = '2.8.1';
 
 /** Options for forms (plugin contract). Changes apply after a reload. */
 export const META: PluginMeta = {

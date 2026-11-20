@@ -1,11 +1,13 @@
 {
   "name": "grapesjs-site-pages",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "GrapesJS plugin: a Pages sidebar — pages in IndexedDB with per-page undo/redo, copy/paste between pages and manual REST sync, or (remote mode) a server-first CMS editor with layouts, templates, a page tree, publishing and revisions; the whole site exports to and imports from a ZIP archive.",
   "type": "module",
   "main": "./dist/grapesjs-pages.umd.cjs",
   "module": "./dist/grapesjs-pages.js",
   "types": "./dist/index.d.ts",
+  "unpkg": "./dist/grapesjs-pages.umd.js",
+  "jsdelivr": "./dist/grapesjs-pages.umd.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -28,7 +30,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config vite.archive.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
+    "build": "vite build && vite build --config vite.archive.config.ts && tsc -p tsconfig.json --emitDeclarationOnly && node -e \"require('fs').copyFileSync('dist/grapesjs-pages.umd.cjs','dist/grapesjs-pages.umd.js')\"",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
