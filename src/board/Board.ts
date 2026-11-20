@@ -22,11 +22,36 @@ export interface BoardState {
   heights?: Record<string, number>;
   /** Sections shown. */
   sections?: BoardSection[];
+  /** The device each frame is shown as (Device Manager id; none: the board's width). */
+  devices?: Record<string, string>;
+}
+
+/** A device of the editor's Device Manager, offered above every frame. */
+export interface BoardDevice {
+  id: string;
+  name: string;
+  /** px; `null` — the board's width (desktop). */
+  width: number | null;
 }
 
 export interface BoardSnapshot {
   html: string;
   css: string;
+}
+
+/**
+ * Live editing on the board: the editor's own canvas is the board's
+ * surface and its frame sits on the frame of the open record.
+ */
+export interface BoardLive {
+  /** The record in the canvas. */
+  activeId(): string | null;
+  /** Puts another record in the canvas. */
+  activate(id: string): void;
+  /** Where the canvas frame goes (screen px from the board's top-left, the zoom); `null` hides it. */
+  place(p: { x: number; y: number; zoom: number } | null): void;
+  /** The record in the canvas is shown as another device (`null`: desktop). */
+  device?(device: BoardDevice | null, width: number): void;
 }
 
 export interface BoardDeps {
@@ -48,6 +73,10 @@ export interface BoardDeps {
   width?: number;
   /** At most this many live frames (the farthest from the centre wait). */
   maxLive?: number;
+  /** Edit on the board: the board is drawn inside the canvas element (`host`). */
+  live?: BoardLive;
+  /** Devices offered above every frame (the editor's Device Manager). */
+  devices?(): BoardDevice[];
 }
 
 const DEFAULT_SECTIONS: BoardSection[] = ['page', 'layout', 'template', 'component'];
@@ -100,7 +129,7 @@ export class Board {
     this.vp = h('div', { class: 'gjsp-board__vp', tabindex: '0' }, this.world);
     this.root = h(
       'div',
-      { class: 'gjsp-board', role: 'dialog', 'aria-label': t('board') },
+      { class: `gjsp-board${d.live ? ' gjsp-board--live' : ''}`, role: d.live ? 'region' : 'dialog', 'aria-label': t('board') },
       h(
         'div',
         { class: 'gjsp-board__bar' },
@@ -122,7 +151,9 @@ export class Board {
 
   /** Shows the board (reads the records and the saved state). */
   async show(): Promise<void> {
-    this.d.host.appendChild(this.root);
+    // Live: under the canvas's own frames (first child of the canvas element).
+    if (this.d.live) this.d.host.prepend(this.root);
+    else this.d.host.appendChild(this.root);
     this.state = (await this.d.load().catch(() => null)) || {};
     if (this.destroyed) return;
     await this.reload();
@@ -130,7 +161,7 @@ export class Board {
     if (v && Number.isFinite(v.x) && Number.isFinite(v.y) && v.zoom > 0) this.view = { ...v };
     else this.fit(false);
     // The open page in sight.
-    const cur = this.d.activeId();
+    const cur = this.d.live?.activeId() ?? this.d.activeId();
     if (cur && this.frames.some((f) => f.id === cur)) {
       this.selected = cur;
       const f = this.frames.find((x) => x.id === cur)!;
@@ -180,7 +211,7 @@ export class Board {
     const show = new Set(this.shown());
     const { frames, sections } = autoLayout(
       this.items.filter((i) => show.has(i.section)),
-      { width: this.width, heights: this.state.heights, placed: this.state.placed }
+      { width: this.width, heights: this.state.heights, placed: this.state.placed, widths: this.widths() }
     );
     this.frames = frames;
     // Section titles.
@@ -197,6 +228,76 @@ export class Board {
       }
     });
     this.draw();
+  }
+
+  /* -------------------------------- devices ------------------------------- */
+
+  private deviceList(): BoardDevice[] {
+    try {
+      return this.d.devices?.() || [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The device a frame is shown as (`null`: desktop, the board's width). */
+  deviceOf(id: string): BoardDevice | null {
+    const dev = this.state.devices?.[id];
+    return (dev && this.deviceList().find((x) => x.id === dev && x.width)) || null;
+  }
+
+  /** A frame's width: its device's, else the board's. */
+  widthOf(id: string): number {
+    return this.deviceOf(id)?.width || this.width;
+  }
+
+  private widths(): Record<string, number> {
+    const out: Record<string, number> = {};
+    Object.keys(this.state.devices || {}).forEach((id) => {
+      const w = this.deviceOf(id)?.width;
+      if (w) out[id] = w;
+    });
+    return out;
+  }
+
+  /** Shows a frame as a device (the live one: the editor switches too, so styles go to its media). */
+  setDevice(id: string, device: BoardDevice | null): void {
+    const devices = (this.state.devices ||= {});
+    if (device?.width) devices[id] = device.id;
+    else delete devices[id];
+    // Its height depends on its width: measured again.
+    if (this.state.heights) delete this.state.heights[id];
+    const x = this.els.get(id);
+    if (x) {
+      x.key = '';
+      this.syncTools(id);
+    }
+    if (this.d.live && this.d.live.activeId() === id) this.d.live.device?.(this.deviceOf(id), this.widthOf(id));
+    this.relayout();
+  }
+
+  /** Zoom on one frame: `fit` — its width fills the board; `1` — 100%, its top-left in sight. */
+  focus(id: string, mode: 'fit' | 1): void {
+    const f = this.frames.find((x) => x.id === id);
+    if (!f) return;
+    const size = this.size();
+    if (mode === 'fit') {
+      const zoom = Math.min(4, Math.max(0.02, (size.w - 120) / f.w));
+      this.view = { zoom, x: f.x - 60 / zoom, y: f.y - 90 / zoom };
+    } else this.view = { zoom: 1, x: f.x - 60, y: f.y - 90 };
+    this.selected = id;
+    this.draw();
+  }
+
+  private syncTools(id: string): void {
+    const x = this.els.get(id);
+    if (!x) return;
+    const cur = this.state.devices?.[id] || '';
+    x.el.querySelectorAll<HTMLButtonElement>('[data-device]').forEach((b) => {
+      const on = (b.dataset.device || '') === (this.deviceOf(id) ? cur : '');
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
   }
 
   private fit(draw = true): void {
@@ -242,6 +343,11 @@ export class Board {
         .map((f) => f.id)
     );
     const byId = new Map(this.items.map((i) => [i.id, i]));
+    const liveId = this.d.live?.activeId() ?? null;
+    if (this.d.live) {
+      const f = liveId ? this.frames.find((x) => x.id === liveId) : undefined;
+      this.d.live.place(f ? { x: (f.x - x) * zoom, y: (f.y - y) * zoom, zoom } : null);
+    }
     this.frames.forEach((f) => {
       let x2 = this.els.get(f.id);
       if (!x2) {
@@ -254,7 +360,8 @@ export class Board {
       s.width = `${f.w}px`;
       s.height = `${f.h}px`;
       x2.el.classList.toggle('is-selected', f.id === this.selected);
-      x2.el.classList.toggle('is-current', f.id === this.d.activeId());
+      x2.el.classList.toggle('is-current', f.id === (liveId ?? this.d.activeId()));
+      x2.el.classList.toggle('is-live', !!liveId && f.id === liveId);
       const title = x2.el.querySelector('.gjsp-board__name');
       const name = byId.get(f.id)?.name || '';
       if (title && title.textContent !== name) title.textContent = name;
@@ -266,15 +373,30 @@ export class Board {
 
   private makeFrame(id: string, name: string) {
     const body = h('div', { class: 'gjsp-board__body' }, h('span', { class: 'gjsp-board__wait' }, name));
+    const t = this.d.t;
+    const devs = this.deviceList();
+    const icon = (w: number | null): string => (!w ? '🖥' : w <= 480 ? '📱' : '▭');
+    const tool = (text: string, title: string, run: () => void, attrs: Record<string, string> = {}) =>
+      h('button', { type: 'button', class: 'gjsp-board__tool', title, 'aria-label': title, ...attrs, onclick: (e: Event) => (e.stopPropagation(), run()) }, text);
+    const tools = h(
+      'div',
+      { class: 'gjsp-board__tools' },
+      ...(devs.length > 1
+        ? devs.map((dv) => tool(icon(dv.width), dv.width ? `${dv.name} · ${dv.width}px` : `${dv.name} · ${this.width}px`, () => this.setDevice(id, dv.width ? dv : null), { 'data-device': dv.width ? dv.id : '' }))
+        : []),
+      tool('⤢', t('boardFitFrame'), () => this.focus(id, 'fit'), { 'data-role': 'fit-frame' }),
+      tool('1:1', t('boardZoom100'), () => this.focus(id, 1), { 'data-role': 'frame-100' })
+    );
     const el = h(
       'div',
       { class: 'gjsp-board__frame', 'data-id': id },
-      h('div', { class: 'gjsp-board__label', 'data-drag': id }, h('span', { class: 'gjsp-board__name' }, name)),
+      h('div', { class: 'gjsp-board__label', 'data-drag': id }, h('span', { class: 'gjsp-board__name' }, name), tools),
       body
     );
     this.world.appendChild(el);
     const rec = { el, body, live: false, key: '' };
     this.els.set(id, rec);
+    this.syncTools(id);
     return rec;
   }
 
@@ -303,7 +425,7 @@ export class Board {
     if (x.key === key && x.body.querySelector('iframe')) return;
     x.key = key;
     const frame = h('iframe', { class: 'gjsp-board__iframe', sandbox: 'allow-same-origin', tabindex: '-1', 'aria-hidden': 'true' }) as HTMLIFrameElement;
-    frame.style.width = `${this.width}px`;
+    frame.style.width = `${this.widthOf(id)}px`;
     frame.addEventListener('load', () => this.measure(id, frame));
     frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8">${this.d.head()}<style>${snap.css}</style><style>html,body{overflow:hidden}html{height:auto}</style></head><body>${snap.html}</body></html>`;
     x.body.replaceChildren(frame);
@@ -319,6 +441,7 @@ export class Board {
 
   /** The frame takes its content's height (a row grows; moved frames too). */
   private measure(id: string, frame: HTMLIFrameElement): void {
+    if (this.d.live?.activeId() === id) return; // the canvas frame gives its height
     let hgt = 0;
     try {
       // The content's height: the body's (the document's is at least the iframe's own).
@@ -348,28 +471,22 @@ export class Board {
       this.vp,
       'wheel',
       (e: WheelEvent) => {
-        e.preventDefault();
         const r = this.vp.getBoundingClientRect();
-        if (e.ctrlKey || e.metaKey) {
-          this.view = zoomAt(this.view, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)), e.clientX - r.left, e.clientY - r.top);
-        } else {
-          const k = e.deltaMode === 1 ? 20 : 1;
-          const dx = (e.shiftKey ? e.deltaY : e.deltaX) * k;
-          const dy = (e.shiftKey ? 0 : e.deltaY) * k;
-          this.view = { ...this.view, x: this.view.x + dx / this.view.zoom, y: this.view.y + dy / this.view.zoom };
-        }
-        this.draw();
+        this.wheel(e, e.clientX - r.left, e.clientY - r.top);
       },
       { passive: false }
     );
     // Drag: a frame by its title, else the board.
     on(this.vp, 'pointerdown', (e: PointerEvent) => {
       const target = e.target as HTMLElement;
+      if (target.closest('.gjsp-board__tools')) return;
       const frameEl = target.closest<HTMLElement>('.gjsp-board__frame');
       const dragId = target.closest<HTMLElement>('[data-drag]')?.dataset.drag;
       const pan = e.button === 1 || this.space || (!frameEl && e.button === 0);
       if (e.button === 0 && frameEl && !this.space) {
         this.selected = frameEl.dataset.id || null;
+        // Live: a click on another frame puts it in the canvas.
+        if (this.d.live && !dragId && this.selected && this.selected !== this.d.live.activeId()) this.d.live.activate(this.selected);
         this.draw();
       }
       if (!pan && !(dragId && e.button === 0)) return;
@@ -402,8 +519,10 @@ export class Board {
       this.vp.addEventListener('pointercancel', up);
     });
     on(this.vp, 'dblclick', (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.gjsp-board__tools')) return;
       const id = (e.target as HTMLElement).closest<HTMLElement>('.gjsp-board__frame')?.dataset.id;
-      if (id) this.d.open(id);
+      if (id && this.d.live) this.d.live.activate(id);
+      else if (id) this.d.open(id);
     });
     on(this.root, 'keydown', (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.('input,select,textarea')) return;
@@ -412,7 +531,10 @@ export class Board {
       else if (k === ' ') {
         this.space = true;
         this.vp.classList.add('is-space');
-      } else if (k === 'Enter' && this.selected) this.d.open(this.selected);
+      } else if (k === 'Enter' && this.selected) {
+        if (this.d.live) this.d.live.activate(this.selected);
+        else this.d.open(this.selected);
+      }
       else if ((k === '!' || k === '1') && e.shiftKey) this.fit();
       else if ((k === ')' || k === '0') && (e.shiftKey || e.ctrlKey || e.metaKey)) this.setZoom(1);
       else if (k === '+' || k === '=') this.zoomBy(1.25);
@@ -432,6 +554,52 @@ export class Board {
       ro.observe(this.vp);
       this.offs.push(() => ro.disconnect());
     }
+  }
+
+  /**
+   * Wheel: pan; Ctrl/⌘ (and a trackpad's pinch): zoom at (sx, sy) — screen
+   * px from the board's top-left. Live: the canvas frame passes its own
+   * wheel events here.
+   */
+  wheel(e: WheelEvent, sx: number, sy: number): void {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.ctrlKey || e.metaKey) {
+      this.view = zoomAt(this.view, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)), sx, sy);
+    } else {
+      const k = e.deltaMode === 1 ? 20 : 1;
+      const dx = (e.shiftKey ? e.deltaY : e.deltaX) * k;
+      const dy = (e.shiftKey ? 0 : e.deltaY) * k;
+      this.view = { ...this.view, x: this.view.x + dx / this.view.zoom, y: this.view.y + dy / this.view.zoom };
+    }
+    this.draw();
+  }
+
+  /** The current zoom (live: the canvas frame scales with the board). */
+  get zoom(): number {
+    return this.view.zoom;
+  }
+
+  /** A fresh snapshot of a record (the one being edited, after a change). */
+  setSnapshot(id: string, snap: BoardSnapshot): void {
+    this.snaps.set(id, snap);
+    const x = this.els.get(id);
+    if (x) x.key = '';
+    this.draw();
+  }
+
+  /** A frame's height measured elsewhere (live: the canvas frame's). */
+  setHeight(id: string, h: number): void {
+    const v = Math.min(Math.max(Math.round(h), 120), 20000);
+    const heights = (this.state.heights ||= {});
+    if (Math.abs((heights[id] || 0) - v) < 2) return;
+    heights[id] = v;
+    this.relayout();
+  }
+
+  /** Redraw (the live record changed). */
+  update(): void {
+    this.draw();
   }
 
   private drawChips(): void {

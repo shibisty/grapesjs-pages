@@ -26,12 +26,45 @@ export class BoardRenderer {
   private readonly cache = new Map<string, { key: string; snap: BoardSnapshot }>();
   private disposed = false;
 
+  /**
+   * Live board: after a batch the canvas gets back the record being edited
+   * (`home`), and `busy` tells when the canvas holds other records.
+   */
+  live: { home(): string | null; busy(b: boolean): void; restored?(): void } | null = null;
+  private home: string | null = null;
+  private selectedId: string | null = null;
+
   constructor(
     private readonly editor: Editor,
     private readonly manager: PagesManager,
     private readonly hooks: () => MarkupHook[],
     private readonly meta: { get<T>(k: string): Promise<T | undefined>; set<T>(k: string, v: T): Promise<void> }
   ) {}
+
+  /** The canvas holds another record than the one being edited (a render is running). */
+  get busy(): boolean {
+    return !!this.running;
+  }
+
+  /** Resolves when nothing is being rendered (the canvas holds the record being edited). */
+  async idle(): Promise<void> {
+    while (this.running) await this.running;
+  }
+
+  /** The open record's markup as it is now (no open: the record being edited, after a change). */
+  async snapshotNow(): Promise<{ id: string; snap: BoardSnapshot } | null> {
+    if (this.running || !this.alive()) return null;
+    const id = this.manager.activeId;
+    if (!id) return null;
+    await this.manager.flush();
+    const rec = await this.manager.store.get(id);
+    if (!rec || this.running || this.manager.activeId !== id) return null;
+    const snap = await runMarkupHooks(this.editor, (rec.kind || 'page') as RecordKind, rec, this.hooks());
+    const entry = { key: await this.keyOf(rec), snap };
+    this.cache.set(id, entry);
+    void this.meta.set(SNAP_META + id, entry).catch(report);
+    return { id, snap };
+  }
 
   /** The editor is going away: nothing more is rendered. */
   dispose(): void {
@@ -81,6 +114,51 @@ export class BoardRenderer {
         q.resolve(null);
       }
     }
+    // Live: the record being edited back in the canvas.
+    if (this.live && this.touched && this.alive()) {
+      const home = this.home;
+      this.touched = false;
+      try {
+        if (home) await this.openFor(home);
+        if (this.selectedId) {
+          const sel = this.findById(this.selectedId);
+          if (sel) this.editor.select(sel);
+        }
+      } catch (e) {
+        report(e);
+      } finally {
+        this.live.busy(false);
+        this.live.restored?.();
+      }
+    }
+  }
+
+  private findById(id: string): any {
+    let hit: any = null;
+    const walk = (c: any): void => {
+      if (hit) return;
+      if (c.getId?.() === id) hit = c;
+      else c.components?.().forEach(walk);
+    };
+    const w = this.editor.getWrapper?.();
+    if (w) walk(w);
+    return hit;
+  }
+
+  /** Opens a record silently and lets the plugins load what it shows. */
+  private async openFor(id: string): Promise<PageRecord | null> {
+    await this.manager.open(id, { force: true, silent: true });
+    const rec = await this.manager.store.get(id);
+    if (!rec) return null;
+    const waits: Array<Promise<unknown>> = [];
+    try {
+      this.editor.trigger(RENDERING_EVENT, { record: rec, waitFor: (p: Promise<unknown>) => waits.push(Promise.resolve(p).catch(report)) });
+    } catch (e) {
+      report(e);
+    }
+    await Promise.all(waits);
+    await new Promise((r) => setTimeout(r, 0));
+    return rec;
   }
 
   private async one(id: string, force: boolean): Promise<BoardSnapshot | null> {
@@ -97,17 +175,25 @@ export class BoardRenderer {
         return kept.snap;
       }
     }
-    if (!this.touched) await this.manager.flush();
-    this.touched = true;
-    await this.manager.open(id, { force: true, silent: true });
-    const waits: Array<Promise<unknown>> = [];
-    try {
-      this.editor.trigger(RENDERING_EVENT, { record: rec, waitFor: (p: Promise<unknown>) => waits.push(Promise.resolve(p).catch(report)) });
-    } catch (e) {
-      report(e);
+    // The record in the canvas: taken as it is, nothing to open.
+    if (!this.touched && id === this.manager.activeId) {
+      await this.manager.flush();
+      const snap = await runMarkupHooks(this.editor, (rec.kind || 'page') as RecordKind, rec, this.hooks());
+      const entry = { key: await this.keyOf((await this.manager.store.get(id)) || rec), snap };
+      this.cache.set(id, entry);
+      void this.meta.set(SNAP_META + id, entry).catch(report);
+      return snap;
     }
-    await Promise.all(waits);
-    await new Promise((r) => setTimeout(r, 0));
+    if (!this.touched) {
+      await this.manager.flush();
+      if (this.live) {
+        this.home = this.live.home();
+        this.selectedId = (this.editor.getSelected?.() as any)?.getId?.() || null;
+        this.live.busy(true);
+      }
+    }
+    this.touched = true;
+    await this.openFor(id);
     if (!this.alive() || this.manager.activeId !== id) return null;
     const kind = (rec.kind || 'page') as RecordKind;
     const snap = await runMarkupHooks(this.editor, kind, rec, this.hooks());

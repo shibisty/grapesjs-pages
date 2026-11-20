@@ -176,6 +176,7 @@ export interface PagesLabels {
   boardZoomOut: string;
   boardZoom100: string;
   boardFit: string;
+  boardFitFrame: string;
   boardRefresh: string;
   boardPages: string;
   boardData: string;

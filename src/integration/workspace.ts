@@ -26,13 +26,15 @@ export interface WorkspaceLike {
       tooltip?: string;
       kind?: 'canvas' | 'element';
       onActivate?(): void;
+      onClosed?(): void;
     },
     opts?: { activate?: boolean; notify?: boolean },
   ): void;
   update(id: string, patch: { title?: string; tooltip?: string; dirty?: boolean }): void;
+  activate?(id: string, opts?: { notify?: boolean }): void;
   close(id: string, opts?: { force?: boolean; notify?: boolean }): boolean;
   has(id: string): boolean;
-  list(): Array<{ id: string }>;
+  list(): Array<{ id: string; kind?: string; active?: boolean }>;
   remembered(prefix: string): string[];
 }
 
@@ -59,8 +61,17 @@ export function onWorkspace(editor: Editor, cb: (ws: WorkspaceLike) => void): vo
   editor.on('sidebar-tools:ready', once);
 }
 
-/** Connects the pages to the workspace; returns a cleanup. */
-export function connectWorkspace(editor: Editor, manager: PagesManager): () => void {
+/** The workspace of grapesjs-sidebar-tools when it is there and ready. */
+export function workspaceOf(editor: Editor): WorkspaceLike | null {
+  return (editor as unknown as { SidebarTools?: SidebarToolsLike }).SidebarTools?.workspace || null;
+}
+
+/**
+ * Connects the pages to the workspace; returns a cleanup. `quiet()`: while
+ * it is true (the board is the shown tab) an opened page gets its tab
+ * without being shown.
+ */
+export function connectWorkspace(editor: Editor, manager: PagesManager, quiet: () => boolean = () => false): (() => void) & { show(id: string): Promise<void> } {
   let ws: WorkspaceLike | null = null;
   let disposed = false;
   const offs: Array<() => void> = [];
@@ -84,7 +95,7 @@ export function connectWorkspace(editor: Editor, manager: PagesManager): () => v
   /** The page that is open now gets / shows its tab (it is already loaded: no notify). */
   const showActive = (rec?: PageRecord | null) => {
     if (!ws || !rec) return;
-    ws.open(tabOf(rec), { activate: true, notify: false });
+    ws.open(tabOf(rec), { activate: !quiet(), notify: false });
   };
 
   /** Titles of open tabs; tabs of records that are gone. */
@@ -121,8 +132,14 @@ export function connectWorkspace(editor: Editor, manager: PagesManager): () => v
   on(EVENTS.change, () => void sync().catch(report));
   onWorkspace(editor, (w) => void attach(w).catch(report));
 
-  return () => {
+  const cleanup = () => {
     disposed = true;
     offs.splice(0).forEach((f) => f());
   };
+  /** Shows the tab of a record (already open in the canvas). */
+  const show = async (id: string): Promise<void> => {
+    const rec = await manager.store.get(id);
+    if (rec && ws) ws.open(tabOf(rec), { activate: true, notify: false });
+  };
+  return Object.assign(cleanup, { show });
 }

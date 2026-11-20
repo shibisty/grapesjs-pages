@@ -60,11 +60,17 @@ export const LAYOUT_DEFAULTS: LayoutOptions = { width: 1280, height: 800, gap: 1
  */
 export function autoLayout(
   items: BoardItem[],
-  o: Partial<LayoutOptions> & { heights?: Record<string, number>; placed?: Record<string, { x: number; y: number }> } = {}
+  o: Partial<LayoutOptions> & {
+    heights?: Record<string, number>;
+    placed?: Record<string, { x: number; y: number }>;
+    /** Frame widths other than `width` (a frame shown as a phone, a tablet). */
+    widths?: Record<string, number>;
+  } = {}
 ): { frames: FrameBox[]; sections: SectionBox[] } {
   const L = { ...LAYOUT_DEFAULTS, ...o };
   const heights = o.heights || {};
   const placed = o.placed || {};
+  const widthOf = (id: string): number => o.widths?.[id] || L.width;
   const frames: FrameBox[] = [];
   const sections: SectionBox[] = [];
   let y = 0;
@@ -77,16 +83,19 @@ export function autoLayout(
     for (let r = 0; r * L.perRow < auto.length; r++) {
       const row = auto.slice(r * L.perRow, (r + 1) * L.perRow);
       let rowH = 0;
-      row.forEach((it, c) => {
+      let x = 0;
+      row.forEach((it) => {
         const h = heights[it.id] || L.height;
+        const w = widthOf(it.id);
         rowH = Math.max(rowH, h);
-        frames.push({ id: it.id, section, x: c * (L.width + L.gap), y, w: L.width, h });
+        frames.push({ id: it.id, section, x, y, w, h });
+        x += w + L.gap;
       });
       y += rowH + L.gap;
     }
     list
       .filter((i) => placed[i.id])
-      .forEach((it) => frames.push({ id: it.id, section, x: placed[it.id].x, y: placed[it.id].y, w: L.width, h: heights[it.id] || L.height }));
+      .forEach((it) => frames.push({ id: it.id, section, x: placed[it.id].x, y: placed[it.id].y, w: widthOf(it.id), h: heights[it.id] || L.height }));
     y += L.gap;
   });
   return { frames, sections };

@@ -210,6 +210,12 @@ export interface PagesOptions {
   workspaceTabs?: boolean;
   /** The board of all pages (Figma-like, the ▦ button). Default `true`. */
   board?: boolean;
+  /**
+   * Edit on the board: the canvas becomes the board and the open record is
+   * edited in its frame, with all the editor's panels. Default `true`;
+   * `false` — the board covers the editor and double click leaves it.
+   */
+  boardLive?: boolean;
   /** Width of the board's frames, px (the device drawn). Default 1280. */
   boardWidth?: number;
   keys?: Partial<KeyBindings>;

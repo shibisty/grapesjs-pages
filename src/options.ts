@@ -28,6 +28,7 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   slotTag: 'page-slot',
   archiveName: '',
   board: true,
+  boardLive: true,
   boardWidth: 1280,
 };
 
@@ -55,6 +56,7 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
     takeOverCopyPaste: o.takeOverCopyPaste !== false,
     workspaceTabs: o.workspaceTabs !== false,
     board: o.board !== false,
+    boardLive: o.boardLive !== false,
     boardWidth: num(o.boardWidth, DEFAULT_OPTIONS.boardWidth, 240),
     injectCss: o.injectCss !== false,
     store: o.store ?? null,
@@ -73,7 +75,7 @@ export function resolveOptions(user: PagesOptions = {}): ResolvedOptions {
 
 export const PLUGIN_ID = 'grapesjs-site-pages';
 /** Version of this package (a test checks it against package.json). */
-export const VERSION = '2.12.0';
+export const VERSION = '2.13.0';
 
 /** Options for forms (plugin contract). Changes apply after a reload. */
 export const META: PluginMeta = {

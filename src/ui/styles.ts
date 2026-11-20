@@ -145,12 +145,30 @@ p.gjsp-seo-hint{margin:0 0 10px}
 .gjsp-board__frame.is-current{box-shadow:0 0 0 calc(2px * var(--gjsp-inv,1)) rgba(120,180,255,.6)}
 .gjsp-board__frame.is-selected{box-shadow:0 0 0 calc(2px * var(--gjsp-inv,1)) var(--gjs-quaternary-color,#d278c9)}
 .gjsp-board__label{position:absolute;left:0;bottom:100%;max-width:100%;padding-bottom:calc(4px * var(--gjsp-inv,1));font-size:calc(12px * var(--gjsp-inv,1));color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:move;user-select:none}
+.gjsp-board__label{display:flex;align-items:flex-end;gap:calc(8px * var(--gjsp-inv,1));width:100%;max-width:none;box-sizing:border-box}
+.gjsp-board__name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.gjsp-board__tools{display:flex;gap:calc(2px * var(--gjsp-inv,1));flex:none;opacity:.55;cursor:default}
+.gjsp-board__frame:hover .gjsp-board__tools,.gjsp-board__frame.is-selected .gjsp-board__tools,.gjsp-board__frame.is-live .gjsp-board__tools{opacity:1}
+.gjsp-board__tool{background:rgba(255,255,255,.06);border:0;color:#ccc;cursor:pointer;border-radius:calc(3px * var(--gjsp-inv,1));font:inherit;font-size:calc(11px * var(--gjsp-inv,1));line-height:1;padding:calc(3px * var(--gjsp-inv,1)) calc(6px * var(--gjsp-inv,1))}
+.gjsp-board__tool:hover{background:rgba(255,255,255,.16)}
+.gjsp-board__tool.is-on{background:var(--gjs-quaternary-color,#d278c9);color:#fff}
 .gjsp-board__frame.is-selected .gjsp-board__label{color:var(--gjs-quaternary-color,#d278c9)}
 .gjsp-board__body{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .gjsp-board__wait{color:#999;font-size:calc(14px * var(--gjsp-inv,1));padding:8px;text-align:center}
 .gjsp-board__frame.is-loading .gjsp-board__wait::after{content:" …"}
 .gjsp-board__iframe{position:absolute;left:0;top:0;height:100%;border:0;pointer-events:none;background:#fff}
 .gjsp-board__hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:4px 10px;border-radius:12px;font-size:11px;opacity:.8;pointer-events:none;white-space:nowrap}
+.gjsp-board--live{position:absolute;inset:0;display:block;background:none;z-index:auto;pointer-events:none}
+.gjsp-board--live .gjsp-board__bar{position:absolute;left:0;right:0;top:0;z-index:5;pointer-events:auto}
+.gjsp-board--live .gjsp-board__vp{position:absolute;inset:0;pointer-events:auto}
+.gjsp-board--live .gjsp-board__hint{z-index:5}
+.gjsp-board-live .gjs-cv-canvas__frames{transform-origin:0 0!important;pointer-events:none!important;width:100%!important;height:100%!important}
+.gjsp-board-live .gjs-frame-wrapper{pointer-events:auto;left:0!important;right:auto!important;top:0!important;margin:0!important;box-shadow:0 0 0 2px var(--gjs-quaternary-color,#d278c9)}
+.gjsp-board-live.gjsp-board-busy .gjs-cv-canvas__frames,.gjsp-board-live.gjsp-board-nolive .gjs-cv-canvas__frames{visibility:hidden}
+.gjsp-board-live.gjsp-board-busy .gjs-tools,.gjsp-board-live.gjsp-board-nolive .gjs-tools{visibility:hidden}
+.gjsp-board__frame.is-live .gjsp-board__body{visibility:hidden}
+.gjsp-board__frame.is-live{background:none;box-shadow:none}
+.gjsp-board__frame.is-live .gjsp-board__label{color:var(--gjs-quaternary-color,#d278c9)}
 `;
 
 export function injectCss(doc: Document = document): void {

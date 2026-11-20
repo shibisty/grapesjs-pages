@@ -21,8 +21,9 @@ import { openComponentFromModal, openSettingsModal, openSyncModal } from './ui/m
 import { BREADCRUMBS_TYPE, registerBreadcrumbs } from './components/breadcrumbs';
 import { formSections, openConflictModal, openCreatePageModal, openPropertiesModal, openRevisionsModal, propertiesForm, openSectionsModal } from './ui/remoteModals';
 import { registerPageSettings } from './ui/settings';
-import { Board, type BoardState } from './board/Board';
+import { Board, type BoardDevice, type BoardState } from './board/Board';
 import { BoardRenderer } from './board/render';
+import { LiveCanvas } from './board/live';
 import type { BoardItem, BoardSection } from './board/layout';
 
 const BOARD_META = 'board';
@@ -33,7 +34,7 @@ import { seoHead, seoJsonLd, SITE_SHARED_KEY, type SeoPage } from './seo/head';
 import { Sidebar } from './ui/Sidebar';
 import { createdOrder, type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
-import { connectWorkspace } from './integration/workspace';
+import { connectWorkspace, workspaceOf } from './integration/workspace';
 import { ArchiveService, type ExportOptions, type ImportOptions, type ImportReport } from './archive/ArchiveService';
 import { openExportModal, openImportModal, type ArchiveActions } from './ui/archiveModals';
 import { ComponentsFeature } from './components/ComponentsFeature';
@@ -125,7 +126,9 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   // Linked components: blocks, read-only instances rebuilt on every open.
   const components = new ComponentsFeature(editor, manager, t, (text) => sidebar?.flash(text));
   // With grapesjs-sidebar-tools 2.2+: every opened page is a tab of its workspace.
-  const disconnectWorkspace = opts.workspaceTabs ? connectWorkspace(editor, manager) : () => undefined;
+  // While the board is the shown tab, pages opened on it get their tabs without being shown.
+  let boardShown = false;
+  const disconnectWorkspace = opts.workspaceTabs ? connectWorkspace(editor, manager, () => boardShown) : Object.assign(() => undefined, { show: async () => undefined });
   const sync = new SyncService(editor, manager, store, opts, t);
   let sidebar: Sidebar | null = null;
   let toggleBtn: HTMLButtonElement | null = null;
@@ -380,19 +383,129 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       .map((href: string) => `<link rel="stylesheet" href="${esc(href)}">`)
       .join('');
   };
+  let live: LiveCanvas | null = null;
+  /** Live board: the record being edited (the renderer may hold another one in the canvas meanwhile). */
+  let editing: string | null = null;
+  let snapTimer: ReturnType<typeof setTimeout> | null = null;
   const closeBoard = (target: string | null): void => {
     if (!board) return;
+    // A board tab: leave it for the tab of the record being edited (the board tab stays).
+    if (boardTab && live && target === null) {
+      const back = editing;
+      boardShown = false;
+      stopBoard(null);
+      if (back) void disconnectWorkspace.show(back).catch(report);
+      return;
+    }
+    stopBoard(target);
+  };
+  const stopBoard = (target: string | null): void => {
+    if (!board) return;
+    boardShown = false;
     board.destroy();
     board = null;
+    if (snapTimer) clearTimeout(snapTimer);
     editor.trigger(EVENTS.board, { open: false });
+    if (live) {
+      // Live: the record being edited stays open.
+      const l = live;
+      live = null;
+      editing = null;
+      renderer.live = null;
+      void renderer
+        .idle()
+        .then(() => l.exit())
+        .catch(report);
+      return;
+    }
     void renderer.finish(target, boardBack).catch(report);
   };
+  /**
+   * With grapesjs-sidebar-tools' workspace the board is a tab of its own
+   * (a canvas document): showing it enters the board, showing another
+   * canvas tab leaves it; ▦ opens / shows that tab.
+   */
+  const BOARD_DOC = 'pages:board';
+  let boardTab = false;
   const toggleBoard = (): void => {
+    const ws = opts.boardLive && opts.workspaceTabs ? workspaceOf(editor) : null;
+    if (ws) {
+      boardTab = true;
+      if (board) return closeBoard(null);
+      if (ws.has(BOARD_DOC)) ws.activate?.(BOARD_DOC);
+      else
+        ws.open(
+          {
+            id: BOARD_DOC,
+            title: t('board'),
+            icon: '<span style="font-size:13px;line-height:1">▦</span>',
+            kind: 'canvas',
+            onActivate: () => {
+              if (!board) startBoard();
+            },
+            onClosed: () => stopBoard(null),
+          },
+          { activate: true }
+        );
+      return;
+    }
+    boardTab = false;
     if (board) return closeBoard(null);
+    startBoard();
+  };
+  const startBoard = (): void => {
+    if (board) return;
     if (opts.injectCss) injectCss();
     boardBack = manager.activeId;
-    const host = editor.getContainer() as HTMLElement;
+    const canvasEl = (editor.Canvas as any).getElement?.() as HTMLElement | undefined;
+    const useLive = opts.boardLive && !!canvasEl;
+    const host = useLive ? canvasEl! : (editor.getContainer() as HTMLElement);
     if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    if (useLive) {
+      live = new LiveCanvas(editor, opts.boardWidth, {
+        onHeight: (h) => {
+          if (editing && editing === manager.activeId) board?.setHeight(editing, h);
+        },
+        onWheel: (e, sx, sy) => board?.wheel(e, sx, sy),
+      });
+      editing = manager.activeId;
+      renderer.live = {
+        home: () => editing,
+        busy: (b) => live?.setBusy(b),
+        restored: () => board?.update(),
+      };
+    }
+    /** The editor's devices, offered above every frame. */
+    const boardDevices = (): BoardDevice[] =>
+      ((editor.Devices as any)?.getAll?.()?.models || []).map((d: any) => {
+        const w = parseInt(String(d.get('width') || ''), 10);
+        return { id: String(d.id ?? d.get('id') ?? d.get('name')), name: String(d.get('name') || d.id), width: Number.isFinite(w) && w > 0 ? w : null };
+      });
+    /** The editor shows the record in the canvas as its frame's device (styles go to that media). */
+    const showAs = (device: BoardDevice | null, width: number): void => {
+      const all = boardDevices();
+      const target = device || all.find((d) => !d.width);
+      try {
+        if (target && (editor as any).getDevice?.() !== target.id) (editor as any).setDevice?.(target.id);
+      } catch (e) {
+        report(e);
+      }
+      live?.setWidth(width);
+    };
+    const activate = (id: string): void => {
+      void (async () => {
+        await renderer.idle();
+        if (!board || id === editing) return;
+        // The page left keeps its last look.
+        const snap = await renderer.snapshotNow();
+        if (snap) board?.setSnapshot(snap.id, snap.snap);
+        editing = id;
+        board?.update();
+        await manager.open(id);
+        if (board) showAs(board.deviceOf(id), board.widthOf(id));
+        board?.update();
+      })().catch(report);
+    };
     board = new Board({
       t,
       host,
@@ -405,10 +518,47 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       close: () => closeBoard(null),
       load: () => store.getMeta<BoardState>(BOARD_META).then((v) => v || null),
       save: (st) => void store.setMeta(BOARD_META, st).catch(report),
+      devices: boardDevices,
+      ...(useLive ? { live: { activeId: () => editing, activate, place: (p) => live?.place(p), device: showAs } } : {}),
     });
-    void board.show().catch(report);
-    editor.trigger(EVENTS.board, { open: true });
+    live?.enter();
+    void board
+      .show()
+      .then(() => {
+        const cur = editing;
+        if (live && board && cur) showAs(board.deviceOf(cur), board.widthOf(cur));
+      })
+      .catch(report);
+    boardShown = !!live;
+    editor.trigger(EVENTS.board, { open: true, live: !!live });
   };
+  // Another canvas tab shown: the board tab is left.
+  on('sidebar-tools:workspace', (e: { type?: string; id?: string }) => {
+    if (!board || !boardTab || e?.type !== 'activate' || !e.id || e.id === BOARD_DOC) return;
+    const doc = workspaceOf(editor)?.list().find((d) => d.id === e.id);
+    if (!doc || doc.kind === 'canvas') stopBoard(null);
+  });
+  // Live: the editor's device chosen elsewhere (a device toolbar) — the frame on the board follows.
+  on('change:device', () => {
+    const id = editing;
+    if (!board || !live || !id || renderer.busy) return;
+    const devId = String((editor as any).getDevice?.() || '');
+    const dev = ((editor.Devices as any)?.getAll?.()?.models || []).find((d: any) => String(d.id) === devId || d.get('name') === devId);
+    const w = parseInt(String(dev?.get('width') || ''), 10);
+    const want = Number.isFinite(w) && w > 0 ? { id: String(dev.id), name: String(dev.get('name') || dev.id), width: w } : null;
+    if ((board.deviceOf(id)?.id || null) !== (want?.id || null)) board.setDevice(id, want);
+  });
+  // Live: the frame of the record being edited follows its changes.
+  on('update', () => {
+    if (!board || !live) return;
+    if (snapTimer) clearTimeout(snapTimer);
+    snapTimer = setTimeout(() => {
+      void renderer
+        .snapshotNow()
+        .then((s) => s && board?.setSnapshot(s.id, s.snap))
+        .catch(report);
+    }, 1200);
+  });
   on(EVENTS.change, () => void board?.reload().catch(report));
   offs.push(() => {
     renderer.dispose();
