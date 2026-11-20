@@ -113,7 +113,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-const until = async (fn: () => boolean | Promise<boolean>, ms = 1500): Promise<void> => {
+const until = async (fn: () => boolean | Promise<boolean>, ms = 10000): Promise<void> => {
   const end = Date.now() + ms;
   while (!(await fn())) {
     if (Date.now() > end) throw new Error('timed out');

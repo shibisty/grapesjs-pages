@@ -85,6 +85,8 @@ describe('dialogs of other plugins', () => {
     form.querySelector<HTMLInputElement>('input[name="name"]')!.value = 'News';
     form.querySelector<HTMLSelectElement>('select[name="parent"]')!.value = home.id;
     form.dispatchEvent(new Event('submit', { cancelable: true }));
+    // The dialog creates the page, then runs the sections' save: wait for the whole chain (slow machines).
+    for (let i = 0; i < 400 && !(editor as any).__saved; i++) await tick(10);
     await settle(s.api);
     const rec = (await s.api.list()).find((r) => r.name === 'News')!;
     expect(rec).toMatchObject({ parentId: home.id, values: { extra: 'x1' } });

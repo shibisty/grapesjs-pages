@@ -12,5 +12,8 @@ export default defineConfig({
     globals: false,
     restoreMocks: true,
     css: false,
+    // A real GrapesJS in jsdom: the archive and remote tests open several editors and pages,
+    // which takes longer than vitest's 5 s default on slower machines (Windows, ~80 s per run).
+    testTimeout: 30_000,
   },
 });
