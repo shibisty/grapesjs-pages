@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'ביצוע מחדש (Ctrl+Y)',
   rename: 'שינוי שם',
   duplicate: 'שכפול',
+  more: 'עוד',
   remove: 'מחיקה',
   confirmRemove: 'למחוק את הדף "%s"?',
   promptName: 'שם הדף',

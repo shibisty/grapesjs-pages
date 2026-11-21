@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Refés (Ctrl+Y)',
   rename: 'Canvia el nom',
   duplicate: 'Duplica',
+  more: 'Més accions',
   remove: 'Suprimeix',
   confirmRemove: 'Voleu suprimir la pàgina «%s»?',
   promptName: 'Nom de la pàgina',

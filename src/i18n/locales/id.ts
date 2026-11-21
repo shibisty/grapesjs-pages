@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Ulangi (Ctrl+Y)',
   rename: 'Ganti nama',
   duplicate: 'Duplikat',
+  more: 'Lainnya',
   remove: 'Hapus',
   confirmRemove: 'Hapus halaman “%s”?',
   promptName: 'Nama halaman',

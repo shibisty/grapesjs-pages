@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: '다시 실행 (Ctrl+Y)',
   rename: '이름 바꾸기',
   duplicate: '복제',
+  more: '더 보기',
   remove: '삭제',
   confirmRemove: '‘%s’ 페이지를 삭제할까요?',
   promptName: '페이지 이름',

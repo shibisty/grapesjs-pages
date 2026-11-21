@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Ponovi (Ctrl+Y)',
   rename: 'Preimenuj',
   duplicate: 'Dupliciraj',
+  more: 'Više',
   remove: 'Obriši',
   confirmRemove: 'Obrisati stranicu „%s“?',
   promptName: 'Naziv stranice',

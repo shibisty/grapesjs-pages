@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Opnieuw (Ctrl+Y)',
   rename: 'Naam wijzigen',
   duplicate: 'Dupliceren',
+  more: 'Meer',
   remove: 'Verwijderen',
   confirmRemove: 'Pagina ‘%s’ verwijderen?',
   promptName: 'Paginanaam',

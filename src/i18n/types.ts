@@ -10,6 +10,8 @@ export interface PagesLabels {
   redo: string;
   rename: string;
   duplicate: string;
+  /** The "⋯" menu of a row */
+  more: string;
   remove: string;
   /** %s — page name */
   confirmRemove: string;

@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Làm lại (Ctrl+Y)',
   rename: 'Đổi tên',
   duplicate: 'Nhân bản',
+  more: 'Thêm',
   remove: 'Xóa',
   confirmRemove: 'Xóa trang “%s”?',
   promptName: 'Tên trang',

@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: '重做 (Ctrl+Y)',
   rename: '重命名',
   duplicate: '创建副本',
+  more: '更多',
   remove: '删除',
   confirmRemove: '删除页面“%s”？',
   promptName: '页面名称',

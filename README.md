@@ -4,7 +4,7 @@
 
 A GrapesJS plugin that turns the editor into a small multi-page site editor:
 
-- **Pages sidebar** — a page tree in both modes: create, edit the properties (name, address, parent, SEO), duplicate, delete and switch pages, drag them into place; a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
+- **Pages sidebar** — a page tree in both modes: create, edit the properties (name, address, parent, SEO), duplicate, delete and switch pages, drag them into place (a row's tools — properties, duplicate, delete and what other plugins add — are in its **⋯** menu, so they never squeeze the name); a quick search by name or address (any case, accents ignored; matches keep their place in the tree, Enter opens the first, Esc clears).
 - **SEO, Open Graph, Schema.org** — a page's properties have tabs for the search snippet (title, description, keywords, canonical, noindex/nofollow), social cards (title, description, image from the Asset Manager or the cloud, type, X card) and Schema.org (a type with its fields, FAQ, breadcrumbs, extra JSON-LD); *SEO of the site* keeps the defaults, the title template and the organization. The `<head>` tags and one JSON-LD graph go with a publish (`head`) and into the archive.
 - **Breadcrumbs** — a block that draws the path of the open page in the tree (in the canvas and in the published HTML).
 - **Data records** (with [grapesjs-storage](https://www.npmjs.com/package/grapesjs-storage)) — a page picks a storage template; records under it show its design with their own data.

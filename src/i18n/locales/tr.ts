@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Yinele (Ctrl+Y)',
   rename: 'Yeniden adlandır',
   duplicate: 'Çoğalt',
+  more: 'Daha fazla',
   remove: 'Sil',
   confirmRemove: '“%s” sayfası silinsin mi?',
   promptName: 'Sayfa adı',

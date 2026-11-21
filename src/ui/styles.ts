@@ -23,10 +23,19 @@ export const CSS = `
 .gjsp-main{flex:1;min-width:0}
 .gjsp-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gjsp-sub{font-size:10px;opacity:.55}
-.gjsp-acts{display:none;gap:1px}
-.gjsp-item:hover .gjsp-acts,.gjsp-item:focus-within .gjsp-acts{display:flex}
+.gjsp-acts{display:flex;align-items:center;gap:1px;flex:none}
+.gjsp-more{background:none;border:0;color:inherit;cursor:pointer;padding:0 5px;border-radius:3px;font-size:15px;line-height:20px;visibility:hidden}
+.gjsp-item:hover .gjsp-more,.gjsp-item:focus-within .gjsp-more,.gjsp-item.has-menu .gjsp-more{visibility:visible}
+.gjsp-more:hover,.gjsp-item.has-menu .gjsp-more{background:rgba(255,255,255,.15)}
 .gjsp-act{background:none;border:0;color:inherit;cursor:pointer;padding:2px 5px;border-radius:3px;font-size:13px}
 .gjsp-act:hover{background:rgba(255,255,255,.15)}
+.gjsp-act__label{display:none}
+.gjsp-menu{position:fixed;z-index:10001;min-width:170px;padding:4px;border-radius:6px;background:var(--gjs-primary-color,#444);color:var(--gjs-font-color,#ddd);box-shadow:0 6px 24px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column}
+.gjsp-menu[hidden]{display:none}
+.gjsp-menu .gjsp-act{display:flex;align-items:center;gap:8px;width:100%;text-align:start;padding:6px 8px;font-size:12px;white-space:nowrap}
+.gjsp-menu .gjsp-act__icon{width:16px;text-align:center;flex:none}
+.gjsp-menu .gjsp-act__label{display:inline}
+.gjsp-menu .gjsp-act:focus-visible{outline:1px solid var(--gjs-color-highlight,#71b7f1)}
 .gjsp-modal{font-size:13px}
 .gjsp-modal label{display:block}
 .gjsp-modal table{width:100%;border-collapse:collapse;margin:8px 0}

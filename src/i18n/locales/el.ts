@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Επανάληψη (Ctrl+Y)',
   rename: 'Μετονομασία',
   duplicate: 'Αντιγραφή',
+  more: 'Περισσότερα',
   remove: 'Διαγραφή',
   confirmRemove: 'Διαγραφή της σελίδας «%s»;',
   promptName: 'Όνομα σελίδας',

@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Rehacer (Ctrl+Y)',
   rename: 'Cambiar nombre',
   duplicate: 'Duplicar',
+  more: 'Más acciones',
   remove: 'Eliminar',
   confirmRemove: '¿Eliminar la página «%s»?',
   promptName: 'Nombre de la página',

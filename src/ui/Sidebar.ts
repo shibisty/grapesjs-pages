@@ -276,20 +276,24 @@ export class Sidebar {
   private row(r: PageRecord, depth = 0, tree?: { parent: boolean; open: boolean; pages: PageRecord[] }): HTMLLIElement {
     const t = this.t;
     const a = this.actions;
+    // Row tools live in a "⋯" menu: shown on hover they would squeeze the title.
     const act = (txt: string, title: string, fn: () => void): HTMLButtonElement =>
       h(
         'button',
         {
           class: 'gjsp-act',
           type: 'button',
+          role: 'menuitem',
           title,
           'aria-label': title,
           onclick: (e: Event) => {
             e.stopPropagation();
+            this.closeMenu();
             fn();
           },
         },
-        txt
+        h('span', { class: 'gjsp-act__icon', 'aria-hidden': 'true' }, txt),
+        h('span', { class: 'gjsp-act__label' }, title)
       );
     const active = r.id === this.manager.activeId;
     const li = h(
@@ -351,20 +355,22 @@ export class Sidebar {
         h('div', { class: 'gjsp-name', title: r.name }, r.dataOf ? h('span', { class: 'gjsp-data-icon', 'aria-hidden': 'true' }, '▤ ') : null, r.name),
         h('div', { class: 'gjsp-sub' }, this.subtitle(r))
       ),
-      h(
-        'div',
-        { class: 'gjsp-acts' },
+      this.toolsOf(
         r.conflict && a.resolve ? act('⚠', t('resolve'), () => a.resolve!(r.id)) : null,
-        ...this.extraActions(r).map((x) => {
-          const b = act(x.icon || '•', x.label, () => x.run(r));
-          b.dataset.action = x.id;
-          return b;
-        }),
-        a.properties && (this.remote || (r.kind || 'page') === 'page')
-          ? act('✎', t('properties'), () => a.properties!(r.id))
-          : act('✎', t('rename'), () => a.rename(r.id)),
-        r.kind === 'site' ? null : act('⧉', t('duplicate'), () => a.duplicate(r.id)),
-        r.kind === 'site' ? null : act('✕', t('remove'), () => a.remove(r.id))
+        h(
+          'div',
+          { class: 'gjsp-menu', role: 'menu', hidden: true },
+          ...this.extraActions(r).map((x) => {
+            const b = act(x.icon || '•', x.label, () => x.run(r));
+            b.dataset.action = x.id;
+            return b;
+          }),
+          a.properties && (this.remote || (r.kind || 'page') === 'page')
+            ? act('✎', t('properties'), () => a.properties!(r.id))
+            : act('✎', t('rename'), () => a.rename(r.id)),
+          r.kind === 'site' ? null : act('⧉', t('duplicate'), () => a.duplicate(r.id)),
+          r.kind === 'site' ? null : act('✕', t('remove'), () => a.remove(r.id))
+        )
       )
     );
     if (depth) li.style.paddingInlineStart = `${10 + depth * 14}px`;
@@ -372,6 +378,85 @@ export class Sidebar {
     if (r.dataOf) li.classList.add('is-data');
     if (tree && a.move) this.draggable(li, r.id, tree.pages);
     return li;
+  }
+
+  /** The tools of a row: a conflict mark (always shown) and the "⋯" button with its menu. */
+  private toolsOf(conflict: HTMLButtonElement | null, menu: HTMLElement): HTMLElement {
+    const more: HTMLButtonElement = h(
+      'button',
+      {
+        class: 'gjsp-more',
+        type: 'button',
+        title: this.t('more'),
+        'aria-label': this.t('more'),
+        'aria-haspopup': 'menu',
+        'aria-expanded': 'false',
+        onclick: (e: Event) => {
+          e.stopPropagation();
+          if (this.menuOpen === menu) this.closeMenu();
+          else this.openMenu(more, menu);
+        },
+        onkeydown: (e: Event) => {
+          if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') e.stopPropagation();
+        },
+      },
+      '⋯'
+    );
+    menu.addEventListener('keydown', (e) => {
+      const ev = e as KeyboardEvent;
+      e.stopPropagation();
+      const items = [...menu.querySelectorAll<HTMLElement>('.gjsp-act')];
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      if (ev.key === 'Escape') {
+        e.preventDefault();
+        this.closeMenu();
+        more.focus();
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        e.preventDefault();
+        items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+      }
+    });
+    return h('div', { class: 'gjsp-acts' }, conflict, more, menu);
+  }
+
+  private menuOpen: HTMLElement | null = null;
+  private menuOff: (() => void) | null = null;
+
+  private openMenu(btn: HTMLButtonElement, menu: HTMLElement): void {
+    this.closeMenu();
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    btn.closest('.gjsp-item')?.classList.add('has-menu');
+    this.menuOpen = menu;
+    // Fixed under the button (the list scrolls and would clip it); flips up near the bottom.
+    const b = btn.getBoundingClientRect();
+    const m = menu.getBoundingClientRect();
+    const rtl = this.root.getAttribute('dir') === 'rtl';
+    menu.style.left = `${Math.max(4, rtl ? b.left : b.right - m.width)}px`;
+    menu.style.top = `${b.bottom + m.height + 4 > window.innerHeight ? Math.max(4, b.top - m.height - 2) : b.bottom + 2}px`;
+    menu.querySelector<HTMLElement>('.gjsp-act')?.focus();
+    const away = (e: Event): void => {
+      if (!menu.contains(e.target as Node) && e.target !== btn) this.closeMenu();
+    };
+    const scroll = (): void => this.closeMenu();
+    const doc = this.root.ownerDocument;
+    doc.addEventListener('pointerdown', away, true);
+    this.list.addEventListener('scroll', scroll);
+    window.addEventListener('resize', scroll);
+    this.menuOff = () => {
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.closest('.gjsp-item')?.classList.remove('has-menu');
+      doc.removeEventListener('pointerdown', away, true);
+      this.list.removeEventListener('scroll', scroll);
+      window.removeEventListener('resize', scroll);
+    };
+  }
+
+  closeMenu(): void {
+    this.menuOff?.();
+    this.menuOff = null;
+    this.menuOpen = null;
   }
 
   /** Actions other plugins add to a record (`pages-manager:record-actions`). */

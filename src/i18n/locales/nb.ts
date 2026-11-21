@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'Gjør om (Ctrl+Y)',
   rename: 'Gi nytt navn',
   duplicate: 'Dupliser',
+  more: 'Flere valg',
   remove: 'Slett',
   confirmRemove: 'Slette siden «%s»?',
   promptName: 'Sidenavn',

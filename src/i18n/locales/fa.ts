@@ -9,6 +9,7 @@ const messages: PagesLabels = {
   redo: 'ازنو (Ctrl+Y)',
   rename: 'تغییر نام',
   duplicate: 'تکثیر',
+  more: 'بیشتر',
   remove: 'حذف',
   confirmRemove: 'صفحهٔ «%s» حذف شود؟',
   promptName: 'نام صفحه',

@@ -10,6 +10,7 @@ const messages: PagesLabels = {
   redo: 'Gör om (Ctrl+Y)',
   rename: 'Byt namn',
   duplicate: 'Duplicera',
+  more: 'Eanet',
   remove: 'Ta bort',
   confirmRemove: 'Ta bort sidan ”%s”?',
   promptName: 'Sidnamn',
