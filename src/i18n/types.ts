@@ -191,6 +191,20 @@ export interface PagesLabels {
   seoKeywords: string;
   seoCanonical: string;
   seoNoindex: string;
+  langs: string;
+  langHint: string;
+  langDefault: string;
+  langPrefix: string;
+  langAdd: string;
+  langSiteTexts: string;
+  moveUp: string;
+  translations: string;
+  langNone: string;
+  langPageHint: string;
+  langHidden: string;
+  langName: string;
+  langSlug: string;
+  langSlugTaken: string;
   seoNofollow: string;
   /** %s — length, %s — the recommended maximum */
   seoChars: string;

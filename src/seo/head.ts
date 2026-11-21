@@ -10,6 +10,8 @@
  * the rest of the page values (`seo.title`…), so a server reads them as is.
  */
 
+import { inLanguage, type LanguageSettings, localizePage, localizeSite, pathIn, siteLanguages, translationOf } from './languages';
+
 /** Keys of a page's values. */
 export const SEO_KEYS = {
   title: 'seo.title',
@@ -107,6 +109,50 @@ export interface SeoInput {
   site?: Record<string, unknown> | null;
   /** All pages (for breadcrumbs); optional. */
   pages?: SeoPage[];
+  /**
+   * The language of the head (a site with `site.languages`): the page's
+   * translation, its address with the language prefix, `hreflang`
+   * alternates. Default: the site's default language.
+   */
+  lang?: string;
+}
+
+/**
+ * The input as it is in its language: the page, the site and the pages
+ * localized (pages hidden in the language left out). `page` is null when
+ * the page does not exist in the language.
+ */
+export function localizeInput(input: SeoInput): { page: SeoPage | null; site: V; pages?: SeoPage[]; lang: string; languages: LanguageSettings | null } {
+  const site = input.site || {};
+  const l = siteLanguages(site);
+  if (!l) return { page: input.page, site, pages: input.pages, lang: '', languages: null };
+  const lang = input.lang && l.enabled.includes(input.lang) ? input.lang : l.default;
+  return {
+    page: localizePage(input.page, lang, l),
+    site: localizeSite(site, lang, l),
+    pages: input.pages?.map((p) => localizePage(p, lang, l)).filter((p): p is SeoPage => !!p),
+    lang,
+    languages: l,
+  };
+}
+
+/**
+ * The page in every language it exists in: `[{ lang, href }]` and the
+ * default one again as `x-default` (absolute with the site's address).
+ */
+export function alternates(page: SeoPage, site: V | null | undefined): Array<{ hreflang: string; href: string }> {
+  const l = siteLanguages(site);
+  if (!l) return [];
+  const base = str(site?.[SITE_KEYS.url]);
+  const out: Array<{ hreflang: string; href: string }> = [];
+  l.enabled.forEach((c) => {
+    if (!inLanguage(page.values, c, l)) return;
+    const own = c === l.default ? str(page.values?.[SEO_KEYS.canonical]) : str(translationOf(page.values, c)[SEO_KEYS.canonical]);
+    out.push({ hreflang: c, href: absolute(own || pathIn(page, c, l), base) });
+  });
+  const def = out.find((a) => a.hreflang === l.default);
+  if (def && out.length > 1) out.push({ hreflang: 'x-default', href: def.href });
+  return out.length > 1 ? out : [];
 }
 
 type V = Record<string, unknown>;
@@ -215,7 +261,13 @@ function trail(page: SeoPage, pages: SeoPage[]): SeoPage[] {
 }
 
 /** The Schema.org graph of a page: WebSite, Organization, the page's node, BreadcrumbList, extra nodes. */
-export function seoJsonLd({ page, site, pages }: SeoInput): Record<string, unknown> | null {
+export function seoJsonLd(input: SeoInput): Record<string, unknown> | null {
+  const loc = localizeInput(input);
+  if (!loc.page) return null;
+  return jsonLdOf(loc.page, loc.site, loc.pages);
+}
+
+function jsonLdOf(page: SeoPage, site: V, pages?: SeoPage[]): Record<string, unknown> | null {
   const v = page.values || {};
   const s = site || {};
   const base = str(s[SITE_KEYS.url]).replace(/\/+$/, '');
@@ -303,10 +355,12 @@ export interface HeadOptions {
   jsonLd?: boolean;
 }
 
-/** The tags of `<head>`, one per line. */
+/** The tags of `<head>`, one per line ('' when the page does not exist in the language). */
 export function seoHead(input: SeoInput, o: HeadOptions = {}): string {
-  const { page } = input;
-  const site = input.site || {};
+  const loc = localizeInput(input);
+  if (!loc.page) return '';
+  const page = loc.page;
+  const site = loc.site;
   const v = page.values || {};
   const base = str(site[SITE_KEYS.url]);
   const out: string[] = [];
@@ -324,6 +378,7 @@ export function seoHead(input: SeoInput, o: HeadOptions = {}): string {
   const robots = [v[SEO_KEYS.noindex] === true ? 'noindex' : '', v[SEO_KEYS.nofollow] === true ? 'nofollow' : ''].filter(Boolean);
   meta('name', 'robots', robots.join(', '));
   if (url && /^https?:\/\//i.test(url)) out.push(`<link rel="canonical" href="${escAttr(url)}">`);
+  alternates(input.page, input.site).forEach((a) => out.push(`<link rel="alternate" hreflang="${escAttr(a.hreflang)}" href="${escAttr(a.href)}">`));
 
   const imgRaw = pick(page, site, SEO_KEYS.ogImage, SITE_KEYS.ogImage);
   const image = imgRaw.startsWith('data:') ? '' : absolute(imgRaw, base);
@@ -340,7 +395,7 @@ export function seoHead(input: SeoInput, o: HeadOptions = {}): string {
   meta('name', 'twitter:site', tw && !tw.startsWith('@') ? `@${tw}` : tw);
 
   if (o.jsonLd !== false) {
-    const ld = seoJsonLd(input);
+    const ld = jsonLdOf(page, site, loc.pages);
     if (ld) out.push(jsonLdScript(ld));
   }
   return out.join('\n');

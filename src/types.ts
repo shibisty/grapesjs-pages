@@ -422,4 +422,17 @@ export interface PagesManagerApi {
     /** Opens the "SEO of the site" dialog. */
     openSite(): void;
   };
+  /**
+   * The site's languages (`site.languages`, see `seo/languages`): other
+   * plugins (grapesjs-storage) read and change them here; a change emits
+   * `pages-manager:languages` `{ languages }`.
+   */
+  languages: {
+    get(): Promise<import('./seo/languages').LanguageSettings | null>;
+    set(languages: import('./seo/languages').LanguageSettings | null): Promise<void>;
+    /** The address prefix of each language (`''` for the default). */
+    prefixes(): Promise<Record<string, string>>;
+    /** A page's address in a language, with the prefix (null: not in that language). */
+    pathIn(id: string, lang: string): Promise<string | null>;
+  };
 }

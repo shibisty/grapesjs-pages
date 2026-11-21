@@ -56,3 +56,6 @@ export { ComponentsFeature, BLOCK_CATEGORY, BLOCK_PREFIX, instanceOf } from './c
 export type { ComponentsApi, ComponentSource } from './components/ComponentsFeature';
 export { expandProject, buildInstance, detachJson, INSTANCE_TYPE, INSTANCE_ATTR } from './components/expand';
 export type { Master } from './components/expand';
+// SEO and languages: pure functions a server can share with the editor.
+export * from './seo/head';
+export * from './seo/languages';

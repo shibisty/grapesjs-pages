@@ -187,7 +187,7 @@ describe('local mode: the dialogs', () => {
     click(sidebar().querySelector('.gjsp-head .gjsp-btn[title="SEO of the site"]')!);
     await until(() => !!document.querySelector('.gjsp-sections'));
     const sf = document.querySelector<HTMLElement>('.gjsp-sections')!;
-    expect([...sf.querySelectorAll('.gjsp-tab')].map((b) => b.textContent)).toEqual(['SEO', 'Organization']);
+    expect([...sf.querySelectorAll('.gjsp-tab')].map((b) => b.textContent)).toEqual(['SEO', 'Organization', 'Languages']);
     set(sf.querySelector('[name="site.url"]'), 'https://shop.test/');
     set(sf.querySelector('[name="site.name"]'), 'Shop');
     set(sf.querySelector('[name="seo.title_template"]'), '%s | Shop');
@@ -242,5 +242,34 @@ describe('remote mode', () => {
     // the site's values through the API go to the site record
     await s.api.seo.setSite({ 'org.name': 'X Ltd', 'site.name': null });
     expect((await s.api.store.get('site'))!.values).toEqual({ 'site.url': 'https://x.test', 'org.name': 'X Ltd' });
+  });
+
+  it('a site with languages: the publish sends the head of every other language; languages API and event', async () => {
+    const ID = '00000000-0000-4000-8000-000000000002';
+    server.seed('pages', ID, 'Про нас', { slug: '/pro-nas', values: { 'seo.title': 'Про нас', 'i18n.en-gb': { name: 'About', slug: '/about', 'seo.title': 'About us' }, 'i18n.pl-pl': { hidden: true } } });
+    server.site.settings = { 'site.url': 'https://x.test' };
+    const s = await createEditor({
+      html: '<p>start</p>',
+      css: '',
+      plugin: { remote: { url: server.base, fetch: server.fetch, cache: new MemoryPageStore(), refreshInterval: 0, retryDelay: 5 } },
+    });
+    editor = s.editor;
+    await until(async () => !!(await s.api.store.get('site')));
+    const events: unknown[] = [];
+    s.editor.on('pages-manager:languages', (e: unknown) => events.push(e));
+    await s.api.languages.set({ default: 'uk-ua', enabled: ['uk-ua', 'en-gb', 'pl-pl'] });
+    expect(events).toEqual([{ languages: { default: 'uk-ua', enabled: ['uk-ua', 'en-gb', 'pl-pl'] } }]);
+    expect(await s.api.languages.get()).toEqual({ default: 'uk-ua', enabled: ['uk-ua', 'en-gb', 'pl-pl'] });
+    expect(await s.api.languages.prefixes()).toEqual({ 'uk-ua': '', 'en-gb': '/en', 'pl-pl': '/pl' });
+    expect(await s.api.languages.pathIn(ID, 'en-gb')).toBe('/en/about');
+    expect(await s.api.languages.pathIn(ID, 'pl-pl')).toBeNull();
+    await s.api.open(ID);
+    await s.api.publish(ID);
+    const call = server.find('POST', `/pages/${ID}/publish`)[0];
+    expect(call.body.head).toContain('<title>Про нас</title>');
+    expect(call.body.head).toContain('hreflang="en-gb" href="https://x.test/en/about"');
+    expect(Object.keys(call.body.heads)).toEqual(['en-gb']);
+    expect(call.body.heads['en-gb']).toContain('<title>About us</title>');
+    expect(call.body.heads['en-gb']).toContain('<link rel="canonical" href="https://x.test/en/about">');
   });
 });

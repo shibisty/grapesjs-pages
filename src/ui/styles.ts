@@ -95,6 +95,14 @@ p.gjsp-seo-hint{margin:0 0 10px}
 .gjsp-seo-count{display:block;text-align:end;font-size:11px;opacity:.6;margin:-8px 0 8px}
 .gjsp-seo-count.is-over{color:#ff8a80;opacity:1}
 .gjsp-seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.gjsp-lang-list{list-style:none;margin:6px 0 10px;padding:0}
+.gjsp-lang{border-bottom:1px solid rgba(127,127,127,.25);padding:4px 0}
+.gjsp-lang-row{display:flex;align-items:center;gap:8px}
+.gjsp-lang-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gjsp-lang-prefix{opacity:.7;font-size:11px}
+.gjsp-lang-site,.gjsp-lang-page{margin:4px 0 8px}
+.gjsp-lang-site>summary,.gjsp-lang-page>summary{cursor:pointer;padding:4px 0;font-weight:600}
+.gjsp-lang-fields[hidden]{display:none}
 .gjsp-seo-row{display:flex;flex-wrap:wrap;gap:4px;margin:-4px 0 10px}
 .gjsp-seo-row .gjsp-secondary{margin:0;padding:5px 10px}
 .gjsp-seo-media .gjsp-input{margin-bottom:6px}

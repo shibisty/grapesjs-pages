@@ -44,6 +44,8 @@ export const EVENTS = {
   recordForm: 'pages-manager:record-form',
   /** A shared project key got a new value (`shared.register`). Payload: `{ key, value }`. */
   shared: 'pages-manager:shared',
+  /** The site's languages changed: `{ languages }` (null: one language). */
+  languages: 'pages-manager:languages',
   /** The board was opened or closed. Payload: `{ open }`. */
   board: 'pages-manager:board',
   /**

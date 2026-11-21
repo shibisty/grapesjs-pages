@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: grapesjs-pages contract v2
-  version: 2.1.0
+  version: 2.2.0
   license:
     name: MIT
     identifier: MIT
@@ -653,6 +653,17 @@ components:
         css:
           type: string
           maxLength: 1048576
+        heads:
+          type: object
+          additionalProperties: { type: string, maxLength: 262144 }
+          description: 'Since 2.2 (grapesjs-site-pages 2.16), a site with languages: the `<head>` of the page in every
+            other language it is in, by language code (`{ "en-gb": "<title>About us</title>…" }`), as `head` is for the
+            default one (translated texts, the address with the language prefix, `hreflang` alternates). The
+            languages are the site''s value `site.languages` (`{ default, enabled }`); a page''s translation into a
+            language is its value `i18n.<code>` (`name`, `slug` without the prefix, `hidden`, any page value). The
+            default language has no address prefix, another one its language (`/en/…`), or its whole code when the
+            site has the language in two regions (`/en-gb/…`); a server routes `/<prefix><slug>` to the page and
+            keeps a translated slug unique in its language. The rules: `src/seo/languages.ts`.'
         head:
           type: string
           maxLength: 262144

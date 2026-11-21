@@ -29,8 +29,10 @@ import type { BoardItem, BoardSection } from './board/layout';
 const BOARD_META = 'board';
 import { INSTANCE_ATTR, INSTANCE_TYPE } from './components/expand';
 import { pageSeoSections, siteSeoSections, type SeoMedia } from './ui/seoForm';
+import { pageTranslationsSection, siteLanguagesSection } from './ui/translations';
 import { mediaSources, pickMedia } from './ui/media';
 import { seoHead, seoJsonLd, SITE_SHARED_KEY, type SeoPage } from './seo/head';
+import { inLanguage, langPrefixes, normalizeLanguages, pathIn, SITE_LANGUAGES_KEY, siteLanguages } from './seo/languages';
 import { Sidebar } from './ui/Sidebar';
 import { createdOrder, type DropWhere, moveInTree } from './ui/tree';
 import { injectCss } from './ui/styles';
@@ -203,8 +205,12 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   };
 
   /** Header fields in either mode. */
-  const update = (id: string, patch: RecordPatch): Promise<PageRecord | undefined> =>
-    remote ? remote.update(id, patch) : manager.updateMeta(id, patch);
+  const update = async (id: string, patch: RecordPatch): Promise<PageRecord | undefined> => {
+    const out = await (remote ? remote.update(id, patch) : manager.updateMeta(id, patch));
+    // The site's languages changed in its properties: other plugins follow.
+    if (patch.values && SITE_LANGUAGES_KEY in patch.values) editor.trigger(EVENTS.languages, { languages: siteLanguages(patch.values) });
+    return out;
+  };
 
   /** The page and its ancestors, root first. */
   const pathOf = async (id: string): Promise<PageRecord[]> => {
@@ -241,7 +247,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
   };
   const setSiteValues = async (patch: Record<string, unknown>): Promise<void> => {
     if (remote && (await store.get('site'))) {
-      await remote.update('site', { values: patch });
+      await update('site', { values: patch });
       return;
     }
     const all = (await store.getMeta<Record<string, unknown>>(SHARED_META)) || {};
@@ -249,6 +255,7 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     Object.entries(patch).forEach(([k, v]) => (v === null || v === undefined || v === '' ? delete cur[k] : (cur[k] = v)));
     await store.setMeta(SHARED_META, { ...all, [SITE_SHARED_KEY]: cur });
     editor.trigger(EVENTS.change);
+    if (SITE_LANGUAGES_KEY in patch) editor.trigger(EVENTS.languages, { languages: siteLanguages(cur) });
   };
   const seoPages = async (): Promise<SeoPage[]> => (await store.all()).filter((r) => !r.deleted && (r.kind || 'page') === 'page' && !r.templateId);
   const seoDeps = { t, media: seoMedia, site: siteValues, pages: seoPages, language: getLocale(editor) };
@@ -258,13 +265,30 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     if (!rec || rec.deleted) throw new Error(`grapesjs-pages: no record ${rid}`);
     return { page: rec, site: await siteValues(), pages: await seoPages() };
   };
-  if (remote) remote.headFor = async (rec) => seoHead({ page: rec, site: await siteValues(), pages: await seoPages() }, { title: true });
+  if (remote) {
+    remote.headFor = async (rec) => seoHead({ page: rec, site: await siteValues(), pages: await seoPages() }, { title: true });
+    // A site with languages: the head of every other language the page is in.
+    remote.headsFor = async (rec) => {
+      const site = await siteValues();
+      const l = siteLanguages(site);
+      const out: Record<string, string> = {};
+      if (!l) return out;
+      const pages = await seoPages();
+      l.enabled.forEach((lang) => {
+        if (lang === l.default || !inLanguage(rec.values, lang, l)) return;
+        const head = seoHead({ page: rec, site, pages, lang }, { title: true });
+        if (head) out[lang] = head;
+      });
+      return out;
+    };
+  }
   const openSiteSeo = (): void => {
     void (async () => {
       if (opts.injectCss) injectCss();
       // Remote mode with a site record: its properties (name + the SEO tabs).
       if (remote && (await store.get('site'))) return openProperties('site');
-      const sections = siteSeoSections(await siteValues(), seoDeps);
+      const site = await siteValues();
+      const sections = [...siteSeoSections(site, seoDeps), siteLanguagesSection(site, seoDeps)];
       openSectionsModal(editor, t, t('siteSeo'), sections, (values) => setSiteValues(values));
     })().catch(report);
   };
@@ -273,11 +297,13 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
     store,
     update,
     remote: !!remote,
-    ownSections: (rec: PageRecord) => {
+    ownSections: async (rec: PageRecord) => {
       const kind = rec.kind || 'page';
-      if (kind === 'site') return siteSeoSections(rec.values || {}, seoDeps);
-      if (kind === 'page' && !rec.templateId) return pageSeoSections(rec, seoDeps);
-      return [];
+      if (kind === 'site') return [...siteSeoSections(rec.values || {}, seoDeps), siteLanguagesSection(rec.values || {}, seoDeps)];
+      if (kind !== 'page' || rec.templateId) return [];
+      // Translations: a tab of its own once the site has languages.
+      const many = (siteLanguages(await siteValues().catch(() => ({})))?.enabled.length || 0) > 1;
+      return [...pageSeoSections(rec, seoDeps), ...(many ? [pageTranslationsSection(rec, seoDeps)] : [])];
     },
   };
   const openProperties = (id: string): void => void openPropertiesModal(editor, propsDeps, t, id).catch(report);
@@ -706,6 +732,20 @@ function pagesPlugin(editor: Editor, userOpts: PagesOptions = {}): void {
       site: () => siteValues(),
       setSite: (values) => setSiteValues(values),
       openSite: () => openSiteSeo(),
+    },
+    languages: {
+      get: async () => siteLanguages(await siteValues()),
+      set: async (l) => {
+        const n = l ? normalizeLanguages(l) : null;
+        await setSiteValues({ [SITE_LANGUAGES_KEY]: n, ...(n ? { 'site.lang': n.default } : {}) });
+      },
+      prefixes: async () => langPrefixes(siteLanguages(await siteValues())),
+      pathIn: async (id, lang) => {
+        const rec = await store.get(id);
+        if (!rec || rec.deleted) return null;
+        const l = siteLanguages(await siteValues());
+        return inLanguage(rec.values, lang, l) ? pathIn(rec, lang, l) : null;
+      },
     },
     hooks: {
       onLoad: (fn) => manager.addLoadHook(fn),

@@ -194,7 +194,7 @@ export class RemoteClient {
     await this.request<null>('DELETE', this.path(kind, id), { version });
   }
 
-  publish(kind: RecordKind, id: string, body: { html?: string; css?: string; head?: string }, version?: string | number | null): Promise<PublishResult> {
+  publish(kind: RecordKind, id: string, body: { html?: string; css?: string; head?: string; heads?: Record<string, string> }, version?: string | number | null): Promise<PublishResult> {
     return this.request<PublishResult>('POST', this.path(kind, id) + '/publish', { body, version });
   }
 

@@ -46,7 +46,7 @@ export interface PropertiesDeps {
   /** Remote mode: layouts exist. */
   remote: boolean;
   /** Tabs of the record's own (SEO, Open Graph, Schema.org for a page; the site's SEO for the site). */
-  ownSections?(rec: PageRecord): RecordFormSection[];
+  ownSections?(rec: PageRecord): RecordFormSection[] | Promise<RecordFormSection[]>;
 }
 
 /** Sections other plugins add to the "new page" / "properties" dialogs. */
@@ -139,7 +139,7 @@ export async function propertiesForm(
     }
     fields.push(h('label', { class: 'gjsp-check' }, inMenu, ' ', t('inMenu')));
   }
-  const sections = [...(deps.ownSections?.({ ...rec }) || []), ...formSections(editor, { mode: 'edit', record: { ...rec } })];
+  const sections = [...((await deps.ownSections?.({ ...rec })) || []), ...formSections(editor, { mode: 'edit', record: { ...rec } })];
   const msg = errBox();
   const save = async (): Promise<void> => {
     try {

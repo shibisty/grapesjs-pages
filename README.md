@@ -272,6 +272,46 @@ What a page gets in `<head>` — `<title>`, `description`, `keywords`, `robots`,
 - `await editor.PagesManager.seo.head(id?)` / `seo.jsonLd(id?)`; `seoHead()` and `seoJsonLd()` are
   exported for servers (no DOM).
 
+### Languages: translated addresses, menus and SEO
+
+**SEO of the site → Languages** turns a site into several languages: add languages (language +
+region, as in grapesjs-storage: `uk-ua`, `en-gb`, `pl-pl`), pick the default one (★), order them;
+per language, the site's name, title template and default description. The addresses:
+
+- the default language has no prefix: `/about`;
+- another language is prefixed with its language: `/en/about`; with the whole code when the site
+  has the language in two regions: `/en-gb/about`, `/en-us/about`.
+
+A page's properties then get a **Translations** tab: per language its name (menus, breadcrumbs),
+address (`/about-us`; empty: the default one under the prefix), SEO, Open Graph and the texts of
+Schema.org (author, brand, area, place, address, questions and answers), or **not in this language**
+(no address, left out of that language's menus and `hreflang`). Empty fields take the default
+language's; a canonical address is not inherited. An address taken twice in a language stops the
+save.
+
+The data are values, so a server that does not know languages keeps working:
+
+```json
+// the site's values
+{ "site.languages": { "default": "uk-ua", "enabled": ["uk-ua", "en-gb", "pl-pl"] }, "site.lang": "uk-ua",
+  "i18n.en-gb": { "site.name": "Shop", "seo.title_template": "%s — Shop" } }
+// a page's values
+{ "seo.title": "Про нас",
+  "i18n.en-gb": { "name": "About", "slug": "/about", "seo.title": "About us", "schema.props": { "author": "Ann" } },
+  "i18n.pl-pl": { "hidden": true } }
+```
+
+A publish (remote mode) sends `head` in the default language with `hreflang` alternates and
+`x-default`, and `heads` — `{ "en-gb": "<title>About us…" }` — for every other language the page is
+in. The rules are pure functions in [`src/seo/languages.ts`](./src/seo/languages.ts), exported for
+servers (also from `grapesjs-site-pages/archive`): `siteLanguages`, `langPrefixes`, `langOfPath`
+(an address → its language and the address without the prefix), `pathIn`, `slugIn`, `inLanguage`,
+`localizePage`, `valuesIn`, `slugClashes`; `seoHead({ page, site, pages, lang })`, `alternates`.
+
+For other plugins: `editor.PagesManager.languages` — `get()`, `set(languages)`, `prefixes()`,
+`pathIn(id, lang)` — and the event `pages-manager:languages` `{ languages }`. grapesjs-storage 1.6+
+takes the site's languages from here.
+
 ### Breadcrumbs
 
 The *Breadcrumbs* block (`page-breadcrumbs`) is a `<nav class="gjsp-breadcrumbs">` with the path
