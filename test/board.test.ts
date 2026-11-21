@@ -85,7 +85,8 @@ describe('the board', () => {
     frame(other.id).dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(board()).toBeNull();
     await vi.waitFor(() => expect(s.api.getActiveId()).toBe(other.id), { timeout: 5000, interval: 20 });
-    expect(opened[opened.length - 1]).toBe(other.id);
+    // open() takes the id at once and emits after the page has loaded
+    await vi.waitFor(() => expect(opened[opened.length - 1]).toBe(other.id), { timeout: 5000, interval: 20 });
     expect(await s.store.getMeta('board')).toMatchObject({ view: expect.any(Object) });
   });
 
